@@ -20,6 +20,8 @@
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 #include <linux/uaccess.h>
+#include <linux/hwid.h>
+
 /* version V1 sub-banks offset base address */
 /* banks shared by multiple phys */
 #define SSUSB_SIFSLV_V1_SPLLC		0x000	/* shared by u3 phys */
@@ -364,6 +366,14 @@
 #define PROC_FILE_DISCTH "discth"
 #define LOOPBACK_STR "loopback_test"
 
+enum product_name {
+	UNKNOW,
+	RUBY,
+	RUBYPRO,
+	RUBYPLUS,
+};
+static int product_name = UNKNOW;
+
 enum mtk_phy_version {
 	MTK_PHY_V1 = 1,
 	MTK_PHY_V2,
@@ -458,6 +468,22 @@ void cover_val_to_str(u32 val, u8 width, char *str)
 			str[i] = '0';
 		val /= 2;
 	}
+}
+
+static void extcon_parse_cmdline(void)
+{
+	char *ruby = NULL, *rubypro = NULL, *rubyplus = NULL;
+	const char *sku = get_hw_sku();
+	ruby = strnstr(sku, "ruby", strlen(sku));
+	rubypro = strnstr(sku, "rubypro", strlen(sku));
+	rubyplus = strnstr(sku, "rubyplus", strlen(sku));
+	if (rubyplus)
+		product_name = RUBYPLUS;
+	else if (rubypro)
+		product_name = RUBYPRO;
+	else if (ruby)
+		product_name = RUBY;
+	pr_info("product_name = %d, ruby = %d, rubypro = %d, rubyplus = %d\n", product_name, ruby ? 1 : 0, rubypro ? 1 : 0, rubyplus ? 1 : 0);
 }
 
 /*
@@ -1574,6 +1600,8 @@ static void u2_phy_instance_set_mode(struct mtk_tphy *tphy,
 	struct device *dev = &instance->phy->dev;
 	u32 tmp;
 
+	extcon_parse_cmdline();
+
 	tmp = readl(u2_banks->com + U3P_U2PHYDTM1);
 	switch (mode) {
 	case PHY_MODE_UART:
@@ -1581,16 +1609,29 @@ static void u2_phy_instance_set_mode(struct mtk_tphy *tphy,
 		return;
 	case PHY_MODE_USB_DEVICE:
 		tmp |= P2C_FORCE_IDDIG | P2C_RG_IDDIG;
-		device_property_read_u32(dev, "mediatek,eye-src",
-				 &instance->eye_src);
-		device_property_read_u32(dev, "mediatek,eye-vrt",
-				 &instance->eye_vrt);
-		device_property_read_u32(dev, "mediatek,eye-term",
-				 &instance->eye_term);
-		device_property_read_u32(dev, "mediatek,eye-rev6",
-				 &instance->eye_rev6);
-		device_property_read_u32(dev, "mediatek,eye-disc",
-				 &instance->eye_disc);
+		if (product_name == RUBY) {
+			device_property_read_u32(dev, "mediatek,eye-src",
+						&instance->eye_src);
+			device_property_read_u32(dev, "mediatek,eye-vrt",
+						&instance->eye_vrt);
+			device_property_read_u32(dev, "mediatek,eye-term",
+						&instance->eye_term);
+			device_property_read_u32(dev, "mediatek,eye-rev6",
+						&instance->eye_rev6);
+			device_property_read_u32(dev, "mediatek,eye-disc",
+						&instance->eye_disc);
+		} else {
+			device_property_read_u32(dev, "mediatek,eye-rubyproandplus-src",
+						&instance->eye_src);
+			device_property_read_u32(dev, "mediatek,eye-rubyproandplus-vrt",
+						&instance->eye_vrt);
+			device_property_read_u32(dev, "mediatek,eye-rubyproandplus-term",
+						&instance->eye_term);
+			device_property_read_u32(dev, "mediatek,eye-rubyproandplus-rev6",
+						&instance->eye_rev6);
+			device_property_read_u32(dev, "mediatek,eye-rubyproandplus-disc",
+						&instance->eye_disc);
+		}
 		device_property_read_u32(dev, "mediatek,rx-sqth",
 				 &instance->rx_sqth);
 		device_property_read_u32(dev, "mediatek,fsrxlvl",
@@ -1609,16 +1650,30 @@ static void u2_phy_instance_set_mode(struct mtk_tphy *tphy,
 		tmp |= P2C_RG_VBUSVALID | P2C_RG_BVALID | P2C_RG_AVALID;
 		tmp &= ~P2C_RG_SESSEND;
 #endif
-		device_property_read_u32(dev, "mediatek,host-eye-src",
-				 &instance->eye_src);
-		device_property_read_u32(dev, "mediatek,host-eye-vrt",
-				 &instance->eye_vrt);
-		device_property_read_u32(dev, "mediatek,host-eye-term",
-				 &instance->eye_term);
-		device_property_read_u32(dev, "mediatek,host-eye-rev6",
-				 &instance->eye_rev6);
-		device_property_read_u32(dev, "mediatek,host-eye-disc",
-				 &instance->eye_disc);
+		if (product_name == RUBY) {
+			device_property_read_u32(dev, "mediatek,host-eye-src",
+						&instance->eye_src);
+                        device_property_read_u32(dev, "mediatek,host-eye-vrt",
+						&instance->eye_vrt);
+			device_property_read_u32(dev, "mediatek,host-eye-term",
+						&instance->eye_term);
+			device_property_read_u32(dev, "mediatek,host-eye-rev6",
+						&instance->eye_rev6);
+			device_property_read_u32(dev, "mediatek,host-eye-disc",
+						&instance->eye_disc);
+		} else {
+			device_property_read_u32(dev, "mediatek,host-eye-rubyproandplus-src",
+						&instance->eye_src);
+			device_property_read_u32(dev, "mediatek,host-eye-rubyproandplus-vrt",
+						&instance->eye_vrt);
+			device_property_read_u32(dev, "mediatek,host-eye-rubyproandplus-term",
+						&instance->eye_term);
+			device_property_read_u32(dev, "mediatek,host-eye-rubyproandplus-rev6",
+						&instance->eye_rev6);
+			device_property_read_u32(dev, "mediatek,host-eye-rubyproandplus-disc",
+						&instance->eye_disc);
+		}
+
 		device_property_read_u32(dev, "mediatek,rx-sqth",
 				 &instance->rx_sqth);
 		device_property_read_u32(dev, "mediatek,fsrxlvl",
@@ -1979,18 +2034,34 @@ static void phy_parse_property(struct mtk_tphy *tphy,
 
 	if (instance->type != PHY_TYPE_USB2)
 		return;
-
 	instance->bc12_en = device_property_read_bool(dev, "mediatek,bc12");
-	device_property_read_u32(dev, "mediatek,eye-src",
-				 &instance->eye_src);
-	device_property_read_u32(dev, "mediatek,eye-vrt",
-				 &instance->eye_vrt);
-	device_property_read_u32(dev, "mediatek,eye-term",
-				 &instance->eye_term);
-	device_property_read_u32(dev, "mediatek,eye-rev6",
-				 &instance->eye_rev6);
-	device_property_read_u32(dev, "mediatek,eye-disc",
-				 &instance->eye_disc);
+
+	extcon_parse_cmdline();
+
+	if (product_name == RUBY) {
+		device_property_read_u32(dev, "mediatek,eye-src",
+					&instance->eye_src);
+		device_property_read_u32(dev, "mediatek,eye-vrt",
+					&instance->eye_vrt);
+		device_property_read_u32(dev, "mediatek,eye-term",
+					&instance->eye_term);
+		device_property_read_u32(dev, "mediatek,eye-rev6",
+					&instance->eye_rev6);
+		device_property_read_u32(dev, "mediatek,eye-disc",
+					&instance->eye_disc);
+	} else {
+		device_property_read_u32(dev, "mediatek,eye-rubyproandplus-src",
+					 &instance->eye_src);
+		device_property_read_u32(dev, "mediatek,eye-rubyproandplus-vrt",
+					 &instance->eye_vrt);
+		device_property_read_u32(dev, "mediatek,eye-rubyproandplus-term",
+					 &instance->eye_term);
+		device_property_read_u32(dev, "mediatek,eye-rubyproandplus-rev6",
+					 &instance->eye_rev6);
+		device_property_read_u32(dev, "mediatek,eye-rubyproandplus-disc",
+					 &instance->eye_disc);
+	}
+
 	device_property_read_u32(dev, "mediatek,rx-sqth",
 				 &instance->rx_sqth);
 	device_property_read_u32(dev, "mediatek,fsrxlvl",
