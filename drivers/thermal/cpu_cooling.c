@@ -21,6 +21,7 @@
 #include <linux/cpu_cooling.h>
 #include <linux/energy_model.h>
 #include <linux/of_device.h>
+#include <linux/of_device.h>
 
 #include <trace/events/thermal.h>
 
@@ -270,7 +271,7 @@ static int cpufreq_set_cur_state(struct thermal_cooling_device *cdev,
 
 	/* Check if the old cooling action is same as new cooling action */
 	if (cpufreq_cdev->cpufreq_state == state)
-		return 0;
+		return cpufreq_cdev->max_level;
 
 	clip_freq = get_state_freq(cpufreq_cdev, state);
 
@@ -305,6 +306,35 @@ static int cpufreq_set_cur_state(struct thermal_cooling_device *cdev,
 	}
 
 	return ret;
+}
+
+void cpu_limits_set_level(unsigned int cpu, unsigned int max_freq)
+{
+	struct cpufreq_cooling_device *cpufreq_cdev;
+	struct thermal_cooling_device *cdev;
+	unsigned int cdev_cpu;
+	unsigned int level;
+
+	list_for_each_entry(cpufreq_cdev, &cpufreq_cdev_list, node) {
+		sscanf(cpufreq_cdev->cdev->type, "thermal-cpufreq-%d", &cdev_cpu);
+		if (cdev_cpu == cpu) {
+			for (level = 0; level <= cpufreq_cdev->max_level; level++) {
+				int target_freq = cpufreq_cdev->em->table[level].frequency;
+				pr_err("%s: %d not part of any cooling device\n", __func__, target_freq);
+
+				if (max_freq >= target_freq) {
+
+					cdev = cpufreq_cdev->cdev;
+					if (cdev)
+						cdev->ops->set_cur_state(cdev, level);
+
+					break;
+				}
+			}
+
+			break;
+		}
+	}
 }
 
 #ifdef CONFIG_ENERGY_MODEL
