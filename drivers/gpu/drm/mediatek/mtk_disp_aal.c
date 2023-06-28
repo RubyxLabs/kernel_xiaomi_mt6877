@@ -2238,6 +2238,9 @@ static void mtk_aal_bypass(struct mtk_ddp_comp *comp, int bypass,
 				comp_aal1->regs_pa + DISP_AAL_CFG, bypass, 0x1);
 		}
 		atomic_set(&g_aal_force_relay, bypass);
+		if (bypass == 0) // Enable AAL Histogram
+			cmdq_pkt_write(handle, comp->cmdq_base,
+				comp->regs_pa + DISP_AAL_CFG, 0x3 << 1, (0x3 << 1));
 	}
 #else
 	AALFLOW_LOG("is ignored\n");
