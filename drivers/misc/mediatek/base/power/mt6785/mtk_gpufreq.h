@@ -62,13 +62,6 @@ extern void mt_gpufreq_set_loading(unsigned int gpu_loading); /* legacy */
 extern void mt_gpufreq_power_control_enable(bool cg, bool mtcmos, bool buck);
 extern void mt_gpufreq_power_control_disable(bool cg, bool mtcmos, bool buck);
 
-#ifdef CONFIG_MTK_RAM_CONSOLE
-extern void aee_rr_rec_gpu_dvfs_vgpu(u8 val);
-extern void aee_rr_rec_gpu_dvfs_oppidx(u8 val);
-extern void aee_rr_rec_gpu_dvfs_status(u8 val);
-extern u8 aee_rr_curr_gpu_dvfs_status(void);
-#endif /* CONFIG_MTK_RAM_CONSOLE */
-
 /*****************
  * power limit notification
  ******************/

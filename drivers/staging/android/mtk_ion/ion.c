@@ -80,8 +80,8 @@ void ion_dmabuf_dbg_show(struct seq_file *s)
 		seq_printf(s, "%18.s %8.s %4.s\n",
 			   "buffer", "size", "ref");
 	} else {
-		pr_info("\ndmabuf get/put count for orphaned buffer\n");
-		pr_info("%18.s %8.s %3.s\n",
+		pr_debug("\ndmabuf get/put count for orphaned buffer\n");
+		pr_debug("%18.s %8.s %3.s\n",
 			"buffer", "size", "ref");
 	}
 	list_for_each_entry(dmabuf, &dmabuf_list.head, node) {
@@ -95,7 +95,7 @@ void ion_dmabuf_dbg_show(struct seq_file *s)
 					   buffer, buffer->size,
 					atomic_read(&dmabuf->ref_dbg));
 			else
-				pr_info("0x%p %8zu %3d\n",
+				pr_debug("0x%p %8zu %3d\n",
 					buffer, buffer->size,
 					atomic_read(&dmabuf->ref_dbg));
 		}
@@ -1648,7 +1648,7 @@ static void ion_buffer_sync_for_device(struct ion_buffer *buffer,
 	mutex_unlock(&buffer->lock);
 }
 
-static int ion_vm_fault(struct vm_fault *vmf)
+static vm_fault_t ion_vm_fault(struct vm_fault *vmf)
 {
 	struct vm_area_struct *vma = vmf->vma;
 	struct dma_buf *dmabuf = vma->vm_private_data;

@@ -1503,7 +1503,15 @@ int kbase_mmu_insert_pages_no_flush(struct kbase_device *kbdev,
 		if (count > remain)
 			count = remain;
 
-		if (!vindex && is_huge_head(*phys))
+		/* There are 3 conditions to satisfy in order to create a level 2 ATE:
+		 *
+		 * - The GPU VA is aligned to 2 MB.
+		 * - The physical address is tagged as the head of a 2 MB region,
+		 *   which guarantees a contiguous physical address range.
+		 * - There are actually 2 MB of virtual and physical pages to map,
+		 *   i.e. 512 entries for the MMU page table.
+		 */
+		if (!vindex && is_huge_head(*phys) && (count == KBASE_MMU_PAGE_ENTRIES))
 			cur_level = MIDGARD_MMU_LEVEL(2);
 		else
 			cur_level = MIDGARD_MMU_BOTTOMLEVEL;
@@ -1860,6 +1868,12 @@ void kbase_mmu_disable(struct kbase_context *kctx)
 }
 #else /* MALI_USE_CSF */
 {
+	/* Calls to this function are inherently asynchronous, with respect to
+	 * MMU operations.
+	 */
+	struct kbase_device *kbdev = kctx->kbdev;
+	int lock_err;
+
 	/* ASSERT that the context has a valid as_nr, which is only the case
 	 * when it's scheduled in.
 	 *
@@ -1870,14 +1884,14 @@ void kbase_mmu_disable(struct kbase_context *kctx)
 	lockdep_assert_held(&kctx->kbdev->hwaccess_lock);
 	lockdep_assert_held(&kctx->kbdev->mmu_hw_mutex);
 
-	/*
-	 * The address space is being disabled, drain all knowledge of it out
-	 * from the caches as pages and page tables might be freed after this.
-	 *
-	 * The job scheduler code will already be holding the locks and context
-	 * so just do the flush.
+	/* lock MMU to prevent existing jobs on GPU from executing while the AS is
+	 * not yet disabled. (Flag true: LOCKING)
 	 */
-	kbase_mmu_flush_invalidate_noretain(kctx, 0, ~0, true);
+	lock_err = kbase_mmu_hw_do_lock_op(kbdev, &kbdev->as[kctx->as_nr], 0,
+					   U32_MAX, true);
+	if (lock_err)
+		dev_err(kbdev->dev, "Failed to lock AS %d for ctx %d_%d",
+			kctx->as_nr, kctx->tgid, kctx->id);
 
 	kctx->kbdev->mmu_mode->disable_as(kctx->kbdev, kctx->as_nr);
 

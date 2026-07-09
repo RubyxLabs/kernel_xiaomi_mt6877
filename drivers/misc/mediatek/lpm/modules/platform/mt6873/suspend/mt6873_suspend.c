@@ -32,6 +32,7 @@
 #include <linux/sched/signal.h>
 #include <linux/spinlock.h>
 #include <uapi/linux/sched/types.h>
+#include <mtk_cpuidle_status.h>
 #include <mt6873_spm_comm.h>
 
 #include <mtk_lpm.h>

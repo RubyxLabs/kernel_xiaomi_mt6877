@@ -30,7 +30,6 @@
 	chosen: chosen {
 		bootargs = "console=tty0 console=ttyS0,921600n1 root=/dev/ram \
 			vmalloc=400M slub_debug=OFZPU swiotlb=noforce \
-			initcall_debug=1 \
 			firmware_class.path=/vendor/firmware \
 			page_owner=on loop.max_part=7";
 			kaslr-seed = <0 0>;
@@ -1018,7 +1017,7 @@
 			"mediatek,toprgu",
 			"syscon", "simple-mfd";
 		reg = <0 0x10007000 0 0x1000>;
-		mediatek,rg_dfd_timeout = <0x1ffff>;
+		mediatek,rg_dfd_timeout = <0xa0>;
 		#reset-cells = <1>;
 		reboot-mode {
 			compatible = "syscon-reboot-mode";
@@ -1701,6 +1700,7 @@
 		bootmode = <&chosen>;
 		gauge_name = "gauge";
 		alias_name = "MT6358";
+		vbif28-supply = <&mt_pmic_vbif28_ldo_reg>;
 	};
 
 #if (CONFIG_MTK_GAUGE_VERSION == 30)
@@ -2540,6 +2540,7 @@
 						<0 0>;
 
 		vcc-supply = <&mt_pmic_vemc_ldo_reg>;
+		vcc-fixed-regulator;
 
 		resets = <&infracfg_rst 0>, <&infracfg_rst 1>,
 				 <&infracfg_rst 2>;
@@ -2579,6 +2580,11 @@
 		efuse_segment: segment@78 {
 			reg = <0x78 0x4>;
 		};
+
+		u2_phy_data: u2_phy_data {
+			reg = <0x1b0 0x4>;
+		};
+
 	};
 
 	ufsphy: phy@11cc0000 {
@@ -2650,6 +2656,11 @@
 			clocks = <&clk26m>;
 			clock-names = "ref";
 			#phy-cells = <1>;
+			mediatek,rx-sqth = <2>;
+			mediatek,fsrxlvl = <1>;
+			nvmem-cells = <&u2_phy_data>;
+			nvmem-cell-names = "intr_cal";
+			nvmem-cell-masks = <0x1f>;
 			status = "okay";
 		};
 	};
@@ -4937,6 +4948,11 @@
 	rt-pd-manager {
 		compatible = "mediatek,rt-pd-manager";
 	};
+
+	mtee_svp: mtee_svp {
+		compatible = "medaitek,svp";
+	};
+	/* svp end */
 };
 
 &i2c6 {

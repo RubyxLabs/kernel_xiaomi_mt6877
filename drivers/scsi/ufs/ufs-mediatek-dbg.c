@@ -109,6 +109,11 @@ void ufsdbg_print_info(char **buff, unsigned long *size, struct seq_file *m)
 		      hba->dev_info.model,
 			  hba->dev_info.wspecversion);
 
+	/* RWcmd info */
+	SPREAD_PRINTF(buff, size, m,
+		      "rcmd = %d, wcmd = %d\n",
+		      hba->ufs_mtk_qcmd_r_cmd_cnt, hba->ufs_mtk_qcmd_w_cmd_cnt);
+
 	/* Error history */
 	ufshcd_print_all_evt_hist(hba, m, buff, size);
 }
@@ -595,11 +600,6 @@ static ssize_t ufs_debug_proc_write(struct file *file, const char *buf,
 {
 	unsigned long op = UFSDBG_UNKNOWN;
 	char cmd_buf[16];
-	struct ufs_hba *hba = ufs_mtk_get_hba();
-	struct ufs_mtk_host *host = NULL;
-
-	if (hba)
-		host = ufshcd_get_variant(hba);
 
 	if (count == 0 || count > 15)
 		return -EINVAL;
@@ -617,19 +617,8 @@ static ssize_t ufs_debug_proc_write(struct file *file, const char *buf,
 	} else if (op == UFSDBG_CMD_LIST_DISABLE) {
 		cmd_hist_disable();
 		pr_info("ufsdbg: cmd history off\n");
-	} else if (op == UFS_CMD_QOS_ON) {
-		if (host && host->qos_allowed) {
-			host->qos_enabled = true;
-			pr_info("ufsdbg: QoS on\n");
-		}
-	} else if (op == UFS_CMD_QOS_OFF) {
-		if (host && host->qos_allowed) {
-			host->qos_enabled = false;
-			pr_info("ufsdbg: QoS off\n");
-		}
-	} else {
+	} else
 		return -EINVAL;
-	}
 
 	return count;
 }

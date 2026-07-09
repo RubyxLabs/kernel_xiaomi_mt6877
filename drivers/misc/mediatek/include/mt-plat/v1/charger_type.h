@@ -6,6 +6,8 @@
 #ifndef __MTK_CHARGER_TYPE_H__
 #define __MTK_CHARGER_TYPE_H__
 
+#include <linux/device.h>
+
 #define SDP_ICL		500
 #define SDP_FCC		500
 #define SDP_VINMIN	4200
@@ -197,7 +199,7 @@ extern int register_charger_det_callback(int (*func)(int));
 
 #if defined(CONFIG_MACH_MT6877) || defined(CONFIG_MACH_MT6893) \
 	|| defined(CONFIG_MACH_MT6885) || defined(CONFIG_MACH_MT6785) \
-	|| defined(CONFIG_MACH_MT6853)
+	|| defined(CONFIG_MACH_MT6853) || defined(CONFIG_MACH_MT6873)
 extern bool is_usb_rdy(struct device *dev);
 #else
 extern bool is_usb_rdy(void);

@@ -761,7 +761,7 @@ PMRSysPhysAddrLocalMem(PMR_IMPL_PRIVDATA pvPriv,
 				uiInAllocOffset = puiOffset[idx] - (uiAllocIndex << uiLog2AllocSize);
 
 				PVR_LOG_RETURN_IF_FALSE(uiAllocIndex < uiNumAllocs,
-				                        "puiOffset out of range", PVRSRV_ERROR_OUT_OF_RANGE);
+					"puiOffset out of range", PVRSRV_ERROR_OUT_OF_RANGE);
 
 				PVR_ASSERT(uiInAllocOffset < (1ULL << uiLog2AllocSize));
 
@@ -1101,7 +1101,7 @@ PMRChangeSparseMemLocalMem(PMR_IMPL_PRIVDATA pPriv,
 				{
 					uiFreepgidx = pai32FreeIndices[ui32Loop];
 
-					if (uiFreepgidx > psPMRPageArrayData->uiTotalNumPages)
+					if (uiFreepgidx >= psPMRPageArrayData->uiTotalNumPages)
 					{
 						PVR_GOTO_WITH_ERROR(eError, PVRSRV_ERROR_DEVICEMEM_OUT_OF_RANGE, e0);
 					}
@@ -1124,7 +1124,7 @@ PMRChangeSparseMemLocalMem(PMR_IMPL_PRIVDATA pPriv,
 		for (ui32Loop = ui32AdtnlAllocPages; ui32Loop < ui32AllocPageCount; ui32Loop++)
 		{
 			uiAllocpgidx = pai32AllocIndices[ui32Loop];
-			if (uiAllocpgidx > psPMRPageArrayData->uiTotalNumPages)
+			if (uiAllocpgidx >= psPMRPageArrayData->uiTotalNumPages)
 			{
 				PVR_GOTO_WITH_ERROR(eError, PVRSRV_ERROR_DEVICEMEM_OUT_OF_RANGE, e0);
 			}

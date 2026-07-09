@@ -48,11 +48,6 @@ obj-y += mtk_ppm_policy_sys_boost.o
 obj-y += mtk_ppm_policy_pwr_thro.o
 obj-y += mtk_ppm_policy_thermal.o
 obj-y += mtk_ppm_policy_lcm_off.o
-obj-y += mtk_ppm_policy_hard_user_limit.o
-obj-y += mtk_ppm_policy_user_limit.o
-obj-y += mtk_ppm_policy_force_limit.o
-# for test purpose
-obj-y += mtk_ppm_policy_ut.o
 
 # platform dependent files
 obj-y += mach/

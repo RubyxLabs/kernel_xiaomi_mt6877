@@ -51,8 +51,7 @@
 #include "mmc_ops.h"
 #include "sd_ops.h"
 #include "sdio_ops.h"
-#include "mtk_mmc_block.h"
-
+#include "../host/mtk-sd-dbg.h"
 /* The max erase timeout, used when host->max_busy_timeout isn't specified */
 #define MMC_ERASE_TIMEOUT_MS	(60 * 1000) /* 60 s */
 
@@ -166,6 +165,8 @@ void mmc_request_done(struct mmc_host *host, struct mmc_request *mrq)
 	mmc_complete_cmd(mrq);
 
 	trace_mmc_request_done(host, mrq);
+
+	dbg_add_host_log(host, 1, cmd->opcode, cmd->resp[0]);
 
 	/*
 	 * We list various conditions for the command to be considered
@@ -901,10 +902,9 @@ int mmc_run_queue_thread(void *data)
 	u64 chk_time = 0;
 
 	pr_info("[CQ] start cmdq thread\n");
-	mt_bio_queue_alloc(current, NULL, false);
 
 	while (1) {
-		mt_biolog_cmdq_check();
+
 		/* End request stage 1/2 */
 		if (atomic_read(&host->cq_rw)
 		|| (atomic_read(&host->areq_cnt) <= 1)) {
@@ -947,7 +947,7 @@ int mmc_run_queue_thread(void *data)
 			if (done_mrq && !done_mrq->data->error
 			&& !done_mrq->cmd->error) {
 				task_id = (done_mrq->cmd->arg >> 16) & 0x1f;
-				mt_biolog_cmdq_dma_end(task_id);
+				//mt_biolog_cmdq_dma_end(task_id);
 				mmc_check_write(host, done_mrq);
 				host->cur_rw_task = CQ_TASK_IDLE;
 				is_done = true;
@@ -989,7 +989,7 @@ int mmc_run_queue_thread(void *data)
 					WARN_ON(1);
 				}
 				host->ops->request(host, dat_mrq);
-				mt_biolog_cmdq_dma_start(task_id);
+				//mt_biolog_cmdq_dma_start(task_id);
 				atomic_dec(&host->cq_rdy_cnt);
 				dat_mrq = NULL;
 			}
@@ -998,10 +998,10 @@ int mmc_run_queue_thread(void *data)
 		/* End request stage 2/2 */
 		if (is_done) {
 			task_id = (done_mrq->cmd->arg >> 16) & 0x1f;
-			mt_biolog_cmdq_isdone_start(task_id,
-				host->areq_que[task_id]->mrq_que);
-			mt_biolog_cmdq_isdone_end(task_id);
-			mt_biolog_cmdq_check();
+			//mt_biolog_cmdq_isdone_start(task_id,
+			//	host->areq_que[task_id]->mrq_que);
+			//mt_biolog_cmdq_isdone_end(task_id);
+			//mt_biolog_cmdq_check();
 			mmc_blk_end_queued_req(host, done_mrq->areq, task_id);
 			done_mrq = NULL;
 			is_done = false;
@@ -1016,7 +1016,7 @@ int mmc_run_queue_thread(void *data)
 
 			while (cmd_mrq) {
 				task_id = ((cmd_mrq->sbc->arg >> 16) & 0x1f);
-				mt_biolog_cmdq_queue_task(task_id, cmd_mrq);
+				//mt_biolog_cmdq_queue_task(task_id, cmd_mrq);
 				if (host->task_id_index & (1 << task_id)) {
 					pr_info(
 "[%s] BUG!!! task_id %d used, task_id_index 0x%08lx, areq_cnt = %d, cq_wait_rdy = %d\n",
@@ -1096,14 +1096,14 @@ int mmc_run_queue_thread(void *data)
 		}
 
 		/* Sleep when nothing to do */
-		mt_biolog_cmdq_check();
+		//mt_biolog_cmdq_check();
 		set_current_state(TASK_INTERRUPTIBLE);
 		if (atomic_read(&host->areq_cnt) == 0)
 			schedule();
 
 		set_current_state(TASK_RUNNING);
 	}
-	mt_bio_queue_free(current);
+	//mt_bio_queue_free(current);
 	return 0;
 }
 #endif
@@ -1256,11 +1256,22 @@ int mmc_cqe_start_req(struct mmc_host *host, struct mmc_request *mrq)
 
 	mmc_mrq_pr_debug(host, mrq, true);
 
+	if(mrq->cmd)
+		dbg_add_host_log(host, 5, mrq->cmd->opcode, mrq->cmd->arg);
+
+	if(mrq->data){
+		if (mrq->data->flags & MMC_DATA_WRITE)
+			dbg_add_host_log(host, 5, MMC_EXECUTE_WRITE_TASK, mrq->data->blocks);//CMD47
+		else if (mrq->data->flags & MMC_DATA_READ)
+			dbg_add_host_log(host, 5, MMC_EXECUTE_READ_TASK, mrq->data->blocks);//CMD46
+	}
+
 	err = mmc_mrq_prep(host, mrq);
 	if (err)
 		goto out_err;
 
 	err = host->cqe_ops->cqe_request(host, mrq);
+
 	if (err)
 		goto out_err;
 
@@ -1270,10 +1281,10 @@ int mmc_cqe_start_req(struct mmc_host *host, struct mmc_request *mrq)
 
 out_err:
 	if (mrq->cmd) {
-		pr_debug("%s: failed to start CQE direct CMD%u, error %d\n",
+		pr_info("%s: failed to start CQE direct CMD%u, error %d\n",
 			 mmc_hostname(host), mrq->cmd->opcode, err);
 	} else {
-		pr_debug("%s: failed to start CQE transfer for tag %d, error %d\n",
+		pr_info("%s: failed to start CQE transfer for tag %d, error %d\n",
 			 mmc_hostname(host), mrq->tag, err);
 	}
 	return err;
@@ -1302,15 +1313,24 @@ void mmc_cqe_request_done(struct mmc_host *host, struct mmc_request *mrq)
 	if (mrq->cmd) {
 		pr_debug("%s: CQE req done (direct CMD%u): %d\n",
 			 mmc_hostname(host), mrq->cmd->opcode, mrq->cmd->error);
+		dbg_add_host_log(host, 6, mrq->cmd->opcode, mrq->cmd->resp[0]);
 	} else {
 		pr_debug("%s: CQE transfer done tag %d\n",
 			 mmc_hostname(host), mrq->tag);
 	}
 
-	if (mrq->data) {
-		pr_debug("%s:     %d bytes transferred: %d\n",
-			 mmc_hostname(host),
-			 mrq->data->bytes_xfered, mrq->data->error);
+	if (mrq->data){
+		if (mrq->data->flags & MMC_DATA_WRITE){
+			pr_debug("%s:     %d bytes transferred: %d WRITE\n",
+				 mmc_hostname(host),
+				 mrq->data->bytes_xfered, mrq->data->error);
+			dbg_add_host_log(host, 6, MMC_EXECUTE_WRITE_TASK, mrq->data->error);//CMD47
+		} else if (mrq->data->flags & MMC_DATA_READ){
+			pr_debug("%s:     %d bytes transferred: %d READ\n",
+				 mmc_hostname(host),
+				 mrq->data->bytes_xfered, mrq->data->error);
+			dbg_add_host_log(host, 6, MMC_EXECUTE_READ_TASK, mrq->data->error);//CMD46
+		}
 	}
 
 	mrq->done(mrq);
@@ -1776,14 +1796,15 @@ int mmc_execute_tuning(struct mmc_card *card)
 	err = host->ops->execute_tuning(host, opcode);
 
 	if (err) {
-		pr_err("%s: tuning execution failed: %d\n",
+		pr_info("%s: tuning execution failed: %d\n",
 			mmc_hostname(host), err);
 	} else {
+		pr_info("%s: tuning execution ok: %d\n",
+			mmc_hostname(host), err);
 		host->retune_now = 0;
 		host->need_retune = 0;
 		mmc_retune_enable(host);
 	}
-
 	return err;
 }
 
@@ -3320,8 +3341,12 @@ static int mmc_rescan_try_freq(struct mmc_host *host, unsigned freq)
 
 	mmc_go_idle(host);
 
-	if (!(host->caps2 & MMC_CAP2_NO_SD))
-		mmc_send_if_cond(host, host->ocr_avail);
+	if (!(host->caps2 & MMC_CAP2_NO_SD)) {
+		if (mmc_send_if_cond_pcie(host, host->ocr_avail))
+			goto out;
+		if (mmc_card_sd_express(host))
+			return 0;
+	}
 
 	/* Order's important: probe SDIO, then SD, then MMC */
 	if (!(host->caps2 & MMC_CAP2_NO_SDIO))
@@ -3336,6 +3361,7 @@ static int mmc_rescan_try_freq(struct mmc_host *host, unsigned freq)
 		if (!mmc_attach_mmc(host))
 			return 0;
 
+out:
 	mmc_power_off(host);
 	return -EIO;
 }
@@ -3462,6 +3488,12 @@ void mmc_rescan(struct work_struct *work)
 	if (mmc_card_is_removable(host) && host->ops->get_cd &&
 			host->ops->get_cd(host) == 0) {
 		mmc_power_off(host);
+		mmc_release_host(host);
+		goto out;
+	}
+
+	/* If an SD express card is present, then leave it as is. */
+	if (mmc_card_sd_express(host)) {
 		mmc_release_host(host);
 		goto out;
 	}

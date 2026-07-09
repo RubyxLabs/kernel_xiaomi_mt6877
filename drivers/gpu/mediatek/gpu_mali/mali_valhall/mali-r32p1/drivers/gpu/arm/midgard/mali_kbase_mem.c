@@ -1720,7 +1720,7 @@ static struct kbase_cpu_mapping *kbasep_find_enclosing_cpu_mapping(
 	unsigned long map_start;
 	size_t map_size;
 
-	lockdep_assert_held(kbase_mem_get_process_mmap_lock());
+	mmap_assert_locked(current->mm);
 
 	if ((uintptr_t) uaddr + size < (uintptr_t) uaddr) /* overflow check */
 		return NULL;
@@ -4821,6 +4821,8 @@ static void kbase_jd_user_buf_unmap(struct kbase_context *kctx, struct kbase_mem
 	struct page **pages;
 	unsigned long offset_within_page = alloc->imported.user_buf.address & ~PAGE_MASK;
 	unsigned long remaining_size = alloc->imported.user_buf.size;
+
+	lockdep_assert_held(&kctx->reg_lock);
 
 	lockdep_assert_held(&kctx->reg_lock);
 

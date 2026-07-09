@@ -447,7 +447,7 @@ static const struct file_operations fanotify_fops = {
 	.fasync		= NULL,
 	.release	= fanotify_release,
 	.unlocked_ioctl	= fanotify_ioctl,
-	.compat_ioctl	= fanotify_ioctl,
+	.compat_ioctl	= compat_ptr_ioctl,
 	.llseek		= noop_llseek,
 };
 
@@ -490,7 +490,7 @@ static int fanotify_find_path(int dfd, const char __user *filename,
 	}
 
 	/* you can only watch an inode if you have read permissions on it */
-	ret = inode_permission2(path->mnt, path->dentry->d_inode, MAY_READ);
+	ret = inode_permission(path->dentry->d_inode, MAY_READ);
 	if (ret)
 		path_put(path);
 out:

@@ -953,6 +953,9 @@ PVRSRV_ERROR FWCommonContextAllocate(CONNECTION_DATA *psConnection,
 
 	psFWCommonContext = (RGXFWIF_FWCOMMONCONTEXT *) (pui8Ptr + ui32FWCommonContextOffset);
 	psFWCommonContext->eDM = eDM;
+#ifndef CONFIG_MTK_GPU_PVR_LEGACY
+	BITMASK_SET(psFWCommonContext->ui32MiscFlags, RGXFWIF_CONTEXT_MISC_FLAGS_HAS_DEFER_COUNT);
+#endif
 
 	/* Set the firmware CCB device addresses in the firmware common context */
 	eError = RGXSetFirmwareAddress(&psFWCommonContext->psCCB,

@@ -138,18 +138,6 @@ static const struct file_operations ppm_ ## name ## _proc_fops = {            \
 	do { if ((lv) & ppm_func_lv_mask)	\
 		ppm_info("<< %s():%d\n", __func__, __LINE__); } while (0)
 
-/* cpufreq */
-
-static inline void mtk_cpu_update_policy(void)
-{
-#ifdef CONFIG_CPU_FREQ
-	if (strcmp(CONFIG_MTK_PLATFORM, "mt6779"))
-		ppm_info("trigger cpufreq_update_policy(*)\n");
-	cpufreq_update_policy(0); /* little core */
-	cpufreq_update_policy(CORE_NUM_L); /* big core */
-#endif
-}
-
 /*==============================================================*/
 /* Enum                                                         */
 /*==============================================================*/
@@ -159,24 +147,18 @@ enum {
 	MAIN	= 1 << 1,
 	HICA	= 1 << 2,
 	DLPT	= 1 << 3,
-	USER_LIMIT = 1 << 4,
-	TIME_PROFILE = 1 << 5,
-	COBRA = 1 << 6,
-	SYS_BOOST = 1 << 7,
-	IPI	= 1 << 8,
-	CPI	= 1 << 9,
-	HARD_USER_LIMIT = 1 << 10,
+	TIME_PROFILE = 1 << 4,
+	COBRA = 1 << 5,
+	SYS_BOOST = 1 << 6,
+	IPI	= 1 << 7,
+	CPI	= 1 << 8,
 };
 
 enum ppm_policy {
 	PPM_POLICY_PTPOD = 0, /* highest priority */
-	PPM_POLICY_UT,
-	PPM_POLICY_FORCE_LIMIT,
 	PPM_POLICY_PWR_THRO,
 	PPM_POLICY_THERMAL,
 	PPM_POLICY_DLPT,
-	PPM_POLICY_HARD_USER_LIMIT,
-	PPM_POLICY_USER_LIMIT,
 	PPM_POLICY_LCM_OFF,
 	PPM_POLICY_SYS_BOOST,
 	PPM_POLICY_HICA,
@@ -234,6 +216,8 @@ struct ppm_cluster_info {
 	struct cpufreq_frequency_table *dvfs_tbl;	/* from DVFS driver */
 	int	doe_max;
 	int	doe_min;
+	struct freq_qos_request *max_freq_req;
+	struct freq_qos_request *min_freq_req;
 };
 
 struct ppm_data {
@@ -327,6 +311,8 @@ extern void aee_rr_rec_ppm_min_pwr_bgt(u32 val);
 extern void aee_rr_rec_ppm_policy_mask(u32 val);
 extern void aee_rr_rec_ppm_waiting_for_pbm(u8 val);
 #endif
+
+extern void ppm_init_qos_request(void);
 
 #ifdef __cplusplus
 }

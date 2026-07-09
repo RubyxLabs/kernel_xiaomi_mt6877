@@ -152,7 +152,10 @@ static void __clear_emi_mpu_vio(void)
 
 static int mpu_check_violation(void)
 {
-	u32 dbg_s, dbg_t, dbg_t_2nd, err;
+	u32 dbg_s, dbg_t, dbg_t_2nd;
+#ifdef CONFIG_MTK_AEE_FEATURE
+	u32 err;
+#endif
 	u32 master_ID, domain_ID, wr_vio, wr_oo_vio;
 	s32 region;
 	const char *master_name;

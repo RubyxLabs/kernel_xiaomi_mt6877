@@ -2610,8 +2610,7 @@ static long FDVT_ioctl(struct file *pFile,
 		if (copy_from_user(&irq_info, (void *)Param,
 		    sizeof(FDVT_WAIT_IRQ_STRUCT)) == 0) {
 			/*  */
-			if (irq_info.type >= FDVT_IRQ_TYPE_AMOUNT ||
-			    irq_info.type < 0) {
+			if (irq_info.type >= FDVT_IRQ_TYPE_AMOUNT) {
 				ret = -EFAULT;
 				log_err("invalid type(%d)", irq_info.type);
 				goto EXIT;
@@ -2651,8 +2650,7 @@ static long FDVT_ioctl(struct file *pFile,
 		    sizeof(FDVT_CLEAR_IRQ_STRUCT)) == 0) {
 			log_dbg("FDVT_CLEAR_IRQ type(%d)", ClearIrq.type);
 
-			if (ClearIrq.type >= FDVT_IRQ_TYPE_AMOUNT ||
-			    ClearIrq.type < 0) {
+			if (ClearIrq.type >= FDVT_IRQ_TYPE_AMOUNT) {
 				ret = -EFAULT;
 				log_err("invalid type(%d)", ClearIrq.type);
 				goto EXIT;

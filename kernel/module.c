@@ -380,6 +380,35 @@ static void *section_objs(const struct load_info *info,
 	return (void *)info->sechdrs[sec].sh_addr;
 }
 
+/* Find a module section: 0 means not found. Ignores SHF_ALLOC flag. */
+static unsigned int find_any_sec(const struct load_info *info, const char *name)
+{
+	unsigned int i;
+
+	for (i = 1; i < info->hdr->e_shnum; i++) {
+		Elf_Shdr *shdr = &info->sechdrs[i];
+		if (strcmp(info->secstrings + shdr->sh_name, name) == 0)
+			return i;
+	}
+	return 0;
+}
+
+/*
+ * Find a module section, or NULL. Fill in number of "objects" in section.
+ * Ignores SHF_ALLOC flag.
+ */
+static __maybe_unused void *any_section_objs(const struct load_info *info,
+					     const char *name,
+					     size_t object_size,
+					     unsigned int *num)
+{
+	unsigned int sec = find_any_sec(info, name);
+
+	/* Section 0 has sh_addr 0 and sh_size 0. */
+	*num = info->sechdrs[sec].sh_size / object_size;
+	return (void *)info->sechdrs[sec].sh_addr;
+}
+
 /* Provided by the linker */
 extern const struct kernel_symbol __start___ksymtab[];
 extern const struct kernel_symbol __stop___ksymtab[];
@@ -2998,8 +3027,7 @@ static int copy_module_from_user(const void __user *umod, unsigned long len,
 		return err;
 
 	/* Suck in entire file: we'll want most of it. */
-	info->hdr = __vmalloc(info->len,
-			GFP_KERNEL | __GFP_NOWARN, PAGE_KERNEL);
+	info->hdr = __vmalloc(info->len, GFP_KERNEL | __GFP_NOWARN);
 	if (!info->hdr)
 		return -ENOMEM;
 
@@ -3206,6 +3234,14 @@ static int find_module_sections(struct module *mod, struct load_info *info)
 	mod->tracepoints_ptrs = section_objs(info, "__tracepoints_ptrs",
 					     sizeof(*mod->tracepoints_ptrs),
 					     &mod->num_tracepoints);
+#endif
+#ifdef CONFIG_BPF_EVENTS
+	mod->bpf_raw_events = section_objs(info, "__bpf_raw_tp_map",
+					   sizeof(*mod->bpf_raw_events),
+					   &mod->num_bpf_raw_events);
+#endif
+#ifdef CONFIG_DEBUG_INFO_BTF_MODULES
+	mod->btf_data = any_section_objs(info, ".BTF", 1, &mod->btf_data_size);
 #endif
 #ifdef CONFIG_JUMP_LABEL
 	mod->jump_entries = section_objs(info, "__jump_table",
@@ -4259,10 +4295,10 @@ int module_kallsyms_on_each_symbol(int (*fn)(void *, const char *,
 static void cfi_init(struct module *mod)
 {
 #ifdef CONFIG_CFI_CLANG
-	preempt_disable();
+	rcu_read_lock_sched();
 	mod->cfi_check =
 		(cfi_check_fn)mod_find_symname(mod, CFI_CHECK_FN_NAME);
-	preempt_enable();
+	rcu_read_unlock_sched();
 	cfi_module_add(mod, module_addr_min, module_addr_max);
 #endif
 }
@@ -4529,70 +4565,6 @@ void print_modules(void)
 		pr_cont(" [last unloaded: %s]", last_unloaded_module);
 	pr_cont("\n");
 }
-
-#ifdef CONFIG_MTK_AEE_FEATURE
-/* MUST ensure called when preempt disabled already */
-int save_modules(char *mbuf, int mbufsize)
-{
-	struct module *mod;
-	char buf[MODULE_FLAGS_BUF_SIZE];
-	int sz = 0;
-	unsigned long text_addr = 0;
-	unsigned long init_addr = 0;
-	int i, search_nm;
-
-	if (mbuf == NULL || mbufsize <= 0) {
-		pr_info("mrdump: module info buffer wrong(sz:%d)\n", mbufsize);
-		return 0;
-	}
-
-	memset(mbuf, '\0', mbufsize);
-	sz += snprintf(mbuf + sz, mbufsize - sz, "Modules linked in:");
-	list_for_each_entry_rcu(mod, &modules, list) {
-		if (mod->state == MODULE_STATE_UNFORMED)
-			continue;
-		if (sz >= mbufsize) {
-			pr_info("mrdump: module info buffer full(sz:%d)\n",
-				mbufsize);
-			break;
-		}
-
-		text_addr = (unsigned long)mod->core_layout.base;
-		init_addr = (unsigned long)mod->init_layout.base;
-		search_nm = 2;
-		if (!mod->sect_attrs)
-			continue;
-		for (i = 0; i < mod->sect_attrs->nsections; i++) {
-			if (!strcmp(mod->sect_attrs->attrs[i].battr.attr.name, ".text")) {
-				text_addr = mod->sect_attrs->attrs[i].address;
-				search_nm--;
-			} else if (!strcmp(mod->sect_attrs->attrs[i].battr.attr.name,
-					   ".init.text")) {
-				init_addr = mod->sect_attrs->attrs[i].address;
-				search_nm--;
-			}
-			if (!search_nm)
-				break;
-		}
-
-		sz += snprintf(mbuf + sz, mbufsize - sz,
-				" %s %lx %lx %d %d %s",
-				mod->name,
-				text_addr,
-				init_addr,
-				mod->core_layout.size,
-				mod->init_layout.size,
-				module_flags(mod, buf));
-	}
-	if (last_unloaded_module[0] && sz < mbufsize)
-		sz += snprintf(mbuf + sz, mbufsize - sz, " [last unloaded: %s]",
-				last_unloaded_module);
-	if (sz < mbufsize)
-		sz += snprintf(mbuf + sz, mbufsize - sz, "\n");
-	return sz;
-}
-EXPORT_SYMBOL(save_modules);
-#endif
 
 #ifdef CONFIG_MODVERSIONS
 /* Generate the signature for all relevant module structures here.

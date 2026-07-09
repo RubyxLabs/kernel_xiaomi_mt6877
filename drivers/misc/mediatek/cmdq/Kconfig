@@ -6,13 +6,13 @@ config MTK_CMDQ_V3
 	  and notify caller configuration is done.
 	  Especially for display/MDP.
 
-config MTK_CMDQ
-	bool "MediaTek CMDQ Support"
-	help
-	  Add support for the MediaTek Command Queue (CMDQ)
-	  driver. The CMDQ is used to help read/write registers with critical
-	  time limitation, such as updating display configuration during the
-	  vblank.
+#config MTK_CMDQ
+#	bool "MediaTek CMDQ Support"
+#	help
+#	  Add support for the MediaTek Command Queue (CMDQ)
+#	  driver. The CMDQ is used to help read/write registers with critical
+#	  time limitation, such as updating display configuration during the
+#	  vblank.
 
 config MTK_CMDQ_TAB
 	bool "enable CMDQ Tablet compatibility"

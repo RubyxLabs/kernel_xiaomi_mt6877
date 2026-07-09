@@ -331,7 +331,11 @@ int Ripi_cpu_dvfs_thread(void *data)
 			/* Avoid memory issue */
 			if (p->mt_policy && p->mt_policy->governor &&
 				/* p->mt_policy->governor_enabled && */
+#if defined(CONFIG_MACH_MT6885)
+				(p->mt_policy->cpu < nr_cpu_ids) &&
+#else
 				(p->mt_policy->cpu < 10) &&
+#endif
 				(p->mt_policy->cpu >= 0)) {
 				int cid;
 
@@ -349,14 +353,6 @@ int Ripi_cpu_dvfs_thread(void *data)
 
 				if (j > p->idx_opp_ppm_base)
 					j = p->idx_opp_ppm_base;
-
-				/* Update policy min/max */
-				p->mt_policy->min =
-					cpu_dvfs_get_freq_by_idx(p,
-					p->idx_opp_ppm_base);
-				p->mt_policy->max =
-					cpu_dvfs_get_freq_by_idx(p,
-					p->idx_opp_ppm_limit);
 
 #ifdef SINGLE_CLUSTER
 				cid = cpufreq_get_cluster_id(

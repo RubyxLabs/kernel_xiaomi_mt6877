@@ -251,8 +251,7 @@ void timers_update_nohz(void)
 }
 
 int timer_migration_handler(struct ctl_table *table, int write,
-			    void __user *buffer, size_t *lenp,
-			    loff_t *ppos)
+			    void *buffer, size_t *lenp, loff_t *ppos)
 {
 	int ret;
 
@@ -1428,7 +1427,6 @@ static void call_timer_fn(struct timer_list *timer,
 			  unsigned long baseclk)
 {
 	int count = preempt_count();
-	unsigned long long ts;
 
 #ifdef CONFIG_LOCKDEP
 	/*
@@ -1450,9 +1448,7 @@ static void call_timer_fn(struct timer_list *timer,
 	lock_map_acquire(&lockdep_map);
 
 	trace_timer_expire_entry(timer, baseclk);
-	check_start_time(ts);
 	fn(timer);
-	check_process_time("timer %ps", ts, fn);
 	trace_timer_expire_exit(timer);
 
 	lock_map_release(&lockdep_map);

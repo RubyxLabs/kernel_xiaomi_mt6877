@@ -217,10 +217,6 @@ static int mtk_cpufreq_init(struct cpufreq_policy *policy)
 	if (ret)
 		return ret;
 
-	ret = cpufreq_frequency_table_verify(policy, freq_table);
-	if (ret)
-		goto out_free_cpufreq_table;
-
 	ret = dev_pm_opp_get_opp_count(info->cpu_dev);
 	if (ret <= 0) {
 		ret = -EINVAL;
@@ -242,7 +238,6 @@ static int mtk_cpufreq_init(struct cpufreq_policy *policy)
 
 out_free_opp:
 	dev_pm_opp_of_cpumask_remove_table(policy->cpus);
-out_free_cpufreq_table:
 	dev_pm_opp_free_cpufreq_table(info->cpu_dev, &freq_table);
 	return ret;
 }

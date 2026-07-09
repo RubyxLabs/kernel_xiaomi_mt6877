@@ -30,7 +30,6 @@ mtk-vcodec-dec-y := mtk_vcodec_dec_drv.o \
 
 ifdef CONFIG_VIDEO_MEDIATEK_VCU
 	mtk-vcodec-dec-y += vdec/vdec_common_if.o \
-		vdec/vdec_log_if.o \
 		vdec_vcu_if.o
 endif
 ifdef CONFIG_VIDEO_MEDIATEK_VPU
@@ -47,7 +46,6 @@ mtk-vcodec-enc-y := mtk_vcodec_enc.o \
 
 ifdef CONFIG_VIDEO_MEDIATEK_VCU
 	mtk-vcodec-enc-y += venc/venc_common_if.o \
-		venc/venc_log_if.o \
 		venc_vcu_if.o
 endif
 ifdef CONFIG_VIDEO_MEDIATEK_VPU
@@ -59,7 +57,6 @@ endif
 mtk-vcodec-common-y := $(MTK_PLATFORM)/mtk_vcodec_intr.o \
 		mtk_vcodec_util.o\
 
-subdir-ccflags-y += -Werror
 ifdef CONFIG_VIDEO_MEDIATEK_VCU
 	ccflags-y += -I$(srctree)/drivers/media/platform/mtk-vcu
 endif

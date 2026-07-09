@@ -1,11 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0-only
 /*
  * fs/kernfs/mount.c - kernfs mount implementation
  *
  * Copyright (c) 2001-3 Patrick Mochel
  * Copyright (c) 2007 SUSE Linux Products GmbH
  * Copyright (c) 2007, 2013 Tejun Heo <tj@kernel.org>
- *
- * This file is released under the GPLv2.
  */
 
 #include <linux/fs.h>
@@ -69,15 +68,14 @@ const struct super_operations kernfs_sops = {
  * Similar to kernfs_fh_get_inode, this one gets kernfs node from inode
  * number and generation
  */
-struct kernfs_node *kernfs_get_node_by_id(struct kernfs_root *root,
-	const union kernfs_node_id *id)
+struct kernfs_node *kernfs_get_node_by_id(struct kernfs_root *root, u64 id)
 {
 	struct kernfs_node *kn;
 
-	kn = kernfs_find_and_get_node_by_ino(root, id->ino);
+	kn = kernfs_find_and_get_node_by_ino(root, kernfs_id_ino(id));
 	if (!kn)
 		return NULL;
-	if (kn->id.generation != id->generation) {
+	if (kernfs_gen(kn) != kernfs_id_gen(id)) {
 		kernfs_put(kn);
 		return NULL;
 	}
@@ -239,9 +237,6 @@ static int kernfs_fill_super(struct super_block *sb, unsigned long magic)
 	if (info->root->flags & KERNFS_ROOT_SUPPORT_EXPORTOP)
 		sb->s_export_op = &kernfs_export_ops;
 	sb->s_time_gran = 1;
-
-	/* sysfs dentries and inodes don't require IO to create */
-	sb->s_shrink.seeks = 0;
 
 	/* get root inode, initialize and unlock it */
 	mutex_lock(&kernfs_mutex);

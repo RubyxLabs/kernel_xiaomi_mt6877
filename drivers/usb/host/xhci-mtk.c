@@ -20,6 +20,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
+#include <linux/uaccess.h>
 
 #include "xhci.h"
 #include "xhci-mtk.h"
@@ -733,8 +734,6 @@ static int xhci_mtk_remove(struct platform_device *dev)
 
 	pm_runtime_put_noidle(&dev->dev);
 	pm_runtime_disable(&dev->dev);
-
-	xhci->xhc_state |= XHCI_STATE_REMOVING;
 
 	usb_remove_hcd(shared_hcd);
 	xhci->shared_hcd = NULL;

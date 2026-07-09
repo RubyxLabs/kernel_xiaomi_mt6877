@@ -95,10 +95,6 @@ unsigned long long __attribute__((weak)) idle_get_current_time_ms(void)
 	return 0;
 }
 
-void __attribute__((weak)) aee_rr_rec_mcdi_val(int id, u32 val)
-{
-}
-
 void __attribute__((weak)) mtk_idle_dump_cnt_in_interval(void)
 {
 }

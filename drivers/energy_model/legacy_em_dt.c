@@ -70,7 +70,7 @@ static int init_em_dt_callback(struct notifier_block *nb, unsigned long val,
 	int cpu, i, ret = 0;
 	const __be32 *tmp;
 
-	if (val != CPUFREQ_NOTIFY)
+	if (val != CPUFREQ_CREATE_POLICY)
 		return 0;
 
 	mutex_lock(&em_loading_mutex);

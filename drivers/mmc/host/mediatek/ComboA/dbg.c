@@ -602,8 +602,7 @@ void msdc_dump_host_state(char **buff, unsigned long *size,
 
 	if (host->start_dma_time > host->stop_dma_time) {
 		SPREAD_PRINTF(buff, size, m,
-		"DMA pending DMA_CFG_SATUS(%d): start %llu, stop %llu\n",
-			MSDC_READ32(MSDC_DMA_CFG) & MSDC_DMA_CFG_STS,
+		"DMA start %llu, stop %llu\n",
 			host->start_dma_time, host->stop_dma_time);
 	}
 
@@ -664,6 +663,7 @@ void get_msdc_aee_buffer(unsigned long *vaddr, unsigned long *size)
 	mmc_cmd_dump(&buff, &free_size, NULL, host->mmc, dbg_max_cnt);
 	mmc_low_io_dump(&buff, &free_size, NULL, host->mmc);
 	/* retrun start location */
+	WARN_ON(vaddr == NULL);
 	*vaddr = (unsigned long)msdc_aee_buffer;
 	*size = MSDC_AEE_BUFFER_SIZE - free_size;
 }
@@ -2250,7 +2250,7 @@ static int msdc_debug_proc_show(struct seq_file *m, void *v)
 
 	if (cmd == SD_TOOL_ZONE) {
 		id = p1;
-		if (id >= HOST_MAX_NUM || id < 0)
+		if (id >= HOST_MAX_NUM || id < 0 || mtk_msdc_host[id] == NULL)
 			goto invalid_host_id;
 
 		host = mtk_msdc_host[id];
@@ -2267,7 +2267,7 @@ static int msdc_debug_proc_show(struct seq_file *m, void *v)
 		}
 	} else if (cmd == SD_TOOL_DMA_SIZE) {
 		id = p2;
-		if (id >= HOST_MAX_NUM || id < 0)
+		if (id >= HOST_MAX_NUM || id < 0 || mtk_msdc_host[id] == NULL)
 			goto invalid_host_id;
 		if (p1 == 0) {
 			drv_mode[id] = p3;
@@ -2326,7 +2326,7 @@ static int msdc_debug_proc_show(struct seq_file *m, void *v)
 		char *device_str, *get_set_str;
 
 		id = p2;
-		if (id >= HOST_MAX_NUM || id < 0)
+		if (id >= HOST_MAX_NUM || id < 0 || mtk_msdc_host[id] == NULL)
 			goto invalid_host_id;
 		host = mtk_msdc_host[id];
 
@@ -2371,7 +2371,7 @@ static int msdc_debug_proc_show(struct seq_file *m, void *v)
 			host->hw->driving_applied->ds_drv);
 	} else if (cmd == SD_TOOL_ENABLE_SLEW_RATE) {
 		id = p1;
-		if (id >= HOST_MAX_NUM || id < 0)
+		if (id >= HOST_MAX_NUM || id < 0 || mtk_msdc_host[id] == NULL)
 			goto invalid_host_id;
 		host = mtk_msdc_host[id];
 		if ((unsigned char)p2 > 1 || (unsigned char)p3 > 1
@@ -2385,7 +2385,7 @@ static int msdc_debug_proc_show(struct seq_file *m, void *v)
 		}
 	} else if (cmd == SD_TOOL_SET_RDTDSEL) {
 		id = p1;
-		if (id >= HOST_MAX_NUM || id < 0)
+		if (id >= HOST_MAX_NUM || id < 0 || mtk_msdc_host[id] == NULL)
 			goto invalid_host_id;
 		host = mtk_msdc_host[id];
 		if ((p2 < 0) || (p2 > 2)) {
@@ -2409,7 +2409,7 @@ static int msdc_debug_proc_show(struct seq_file *m, void *v)
 		}
 	} else if (cmd == SD_TOOL_ENABLE_SMT) {
 		id = p1;
-		if (id >= HOST_MAX_NUM || id < 0)
+		if (id >= HOST_MAX_NUM || id < 0 || mtk_msdc_host[id] == NULL)
 			goto invalid_host_id;
 		host = mtk_msdc_host[id];
 		msdc_set_smt(host, p2);
@@ -2472,7 +2472,7 @@ static int msdc_debug_proc_show(struct seq_file *m, void *v)
 	} else if (cmd == SD_TOOL_MSDC_HOST_MODE) {
 		id = p2;
 		spd_mode = p3;
-		if (id >= HOST_MAX_NUM || id < 0)
+		if (id >= HOST_MAX_NUM || id < 0 || mtk_msdc_host[id] == NULL)
 			goto invalid_host_id;
 		host = mtk_msdc_host[id];
 		if (p1 == 1) {

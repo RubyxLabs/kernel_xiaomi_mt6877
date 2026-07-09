@@ -100,7 +100,7 @@ int mtu3_device_enable(struct mtu3 *mtu)
 
 	mtu3_clrbits(ibase, U3D_SSUSB_IP_PW_CTRL2, SSUSB_IP_DEV_PDN);
 
-	if (mtu->is_u3_ip) {
+	if (mtu->u3_capable) {
 		check_clk = SSUSB_U3_MAC_RST_B_STS;
 		mtu3_clrbits(ibase, SSUSB_U3_CTRL(0),
 			(SSUSB_U3_PORT_DIS | SSUSB_U3_PORT_PDN |
@@ -112,7 +112,7 @@ int mtu3_device_enable(struct mtu3 *mtu)
 
 	if (mtu->ssusb->dr_mode == USB_DR_MODE_OTG) {
 		mtu3_setbits(ibase, SSUSB_U2_CTRL(0), SSUSB_U2_PORT_OTG_SEL);
-		if (mtu->is_u3_ip)
+		if (mtu->u3_capable)
 			mtu3_setbits(ibase, SSUSB_U3_CTRL(0),
 				     SSUSB_U3_PORT_DUAL_MODE);
 	}
@@ -124,7 +124,7 @@ void mtu3_device_disable(struct mtu3 *mtu)
 {
 	void __iomem *ibase = mtu->ippc_base;
 
-	if (mtu->is_u3_ip)
+	if (mtu->u3_capable)
 		mtu3_setbits(ibase, SSUSB_U3_CTRL(0),
 			(SSUSB_U3_PORT_DIS | SSUSB_U3_PORT_PDN));
 
@@ -133,7 +133,7 @@ void mtu3_device_disable(struct mtu3 *mtu)
 
 	if (mtu->ssusb->dr_mode == USB_DR_MODE_OTG) {
 		mtu3_clrbits(ibase, SSUSB_U2_CTRL(0), SSUSB_U2_PORT_OTG_SEL);
-		if (mtu->is_u3_ip)
+		if (mtu->u3_capable)
 			mtu3_clrbits(ibase, SSUSB_U3_CTRL(0),
 				     SSUSB_U3_PORT_DUAL_MODE);
 	}
@@ -191,7 +191,7 @@ static void mtu3_intr_enable(struct mtu3 *mtu)
 	value = SUSPEND_INTR | RESUME_INTR | RESET_INTR | LPM_RESUME_INTR;
 	mtu3_writel(mbase, U3D_COMMON_USB_INTR_ENABLE, value);
 
-	if (mtu->is_u3_ip) {
+	if (mtu->u3_capable) {
 		/* Enable U3 LTSSM interrupts */
 		value = HOT_RST_INTR | WARM_RST_INTR |
 			ENTER_U3_INTR | EXIT_U3_INTR;
@@ -211,8 +211,8 @@ static void mtu3_set_speed(struct mtu3 *mtu, enum usb_device_speed speed)
 {
 	void __iomem *mbase = mtu->mac_base;
 
-	if (speed > mtu->max_speed)
-		speed = mtu->max_speed;
+	if (!mtu->u3_capable && (mtu->max_speed > USB_SPEED_HIGH))
+		mtu->max_speed = USB_SPEED_HIGH;
 
 	switch (speed) {
 	case USB_SPEED_FULL:
@@ -251,12 +251,17 @@ static void mtu3_csr_init(struct mtu3 *mtu)
 {
 	void __iomem *mbase = mtu->mac_base;
 
-	if (mtu->is_u3_ip) {
+	/* be sure interrupts are disabled before registration of ISR */
+	mtu3_intr_disable(mtu);
+	mtu3_intr_status_clear(mtu);
+
+	if (mtu->u3_capable) {
 		/* disable LGO_U1/U2 by default */
 		mtu3_clrbits(mbase, U3D_LINK_POWER_CONTROL,
 				SW_U1_REQUEST_ENABLE | SW_U2_REQUEST_ENABLE);
 		/* enable accept LGO_U1/U2 link command from host */
-		if (!of_find_compatible_node(NULL, NULL, "mediatek,MT6893")) {
+		if (!(of_find_compatible_node(NULL, NULL, "mediatek,MT6893")
+			|| of_find_compatible_node(NULL, NULL, "mediatek,MT6853"))) {
 			dev_info(mtu->ssusb->dev, "enable accept_lgo\n");
 			mtu3_setbits(mbase, U3D_LINK_POWER_CONTROL,
 				SW_U1_ACCEPT_ENABLE | SW_U2_ACCEPT_ENABLE);
@@ -328,7 +333,7 @@ void mtu3_ep_stall_set(struct mtu3_ep *mep, bool set)
 void mtu3_dev_on_off(struct mtu3 *mtu, int is_on)
 {
 	if (is_on) {
-		if (mtu->is_u3_ip && mtu->speed >= USB_SPEED_SUPER)
+		if (mtu->u3_capable && mtu->max_speed >= USB_SPEED_SUPER)
 			mtu3_ss_func_set(mtu, true);
 		else {
 			mtu3_ss_func_set(mtu, false);
@@ -544,7 +549,7 @@ static void get_ep_fifo_config(struct mtu3 *mtu)
 	struct mtu3_fifo_info *rx_fifo;
 	u32 fifosize;
 
-	if (mtu->is_u3_ip) {
+	if (mtu->separate_fifo) {
 		fifosize = mtu3_readl(mtu->mac_base, U3D_CAP_EPNTXFFSZ);
 		tx_fifo = &mtu->tx_fifo;
 		tx_fifo->base = 0;
@@ -881,10 +886,16 @@ static int mtu3_hw_init(struct mtu3 *mtu)
 	dev_info(mtu->dev, "force gen2cp to be 0 ");
 #endif
 	value = mtu3_readl(mtu->ippc_base, U3D_SSUSB_IP_DEV_CAP);
-	mtu->is_u3_ip = !!SSUSB_IP_DEV_U3_PORT_NUM(value);
+	mtu->u3_capable = !!SSUSB_IP_DEV_U3_PORT_NUM(value);
+	/* usb3 ip uses separate fifo */
+	mtu->separate_fifo = mtu->u3_capable;
 
 	dev_info(mtu->dev, "IP version 0x%x(%s IP)\n", mtu->hw_version,
-		mtu->is_u3_ip ? "U3" : "U2");
+		mtu->u3_capable ? "U3" : "U2");
+
+	/* device's u3 port (port0) is disabled */
+	if (mtu->u3_capable && (mtu->ssusb->u3p_dis_msk & BIT(0)))
+		mtu->u3_capable = 0;
 
 	mtu3_check_params(mtu);
 

@@ -485,26 +485,26 @@ static void dump_disp_info(struct drm_mtk_layering_info *disp_info,
 
 static void dump_disp_trace(struct drm_mtk_layering_info *disp_info)
 {
+#define LEN 1000
 	int i, j;
 	struct drm_mtk_layer_config *c;
-	const int len = 1000;
-	char msg[len];
+	char msg[LEN];
 	int n = 0;
 
 	for (i = 0; i < HRT_TYPE_NUM; i++) {
 		if (disp_info->layer_num[i] <= 0)
 			continue;
 
-		n = snprintf(msg, len, "D%d,ovp:%d,dal:%d,LN:%d,G(%d,%d)",
+		n = snprintf(msg, LEN, "D%d,ovp:%d,dal:%d,LN:%d,G(%d,%d)",
 			     i, disp_info->hrt_weight, l_rule_info->dal_enable,
 			     disp_info->layer_num[i], disp_info->gles_head[i],
 			     disp_info->gles_tail[i]);
 
 		for (j = 0; j < disp_info->layer_num[i]; j++) {
-			if (n >= len)
+			if (n >= LEN)
 				break;
 			c = &disp_info->input_config[i][j];
-			n += snprintf(msg + n, len - n,
+			n += snprintf(msg + n, LEN - n,
 				      "|L%d->%d(%u,%u,%ux%u),f:0x%x,c:%d",
 				      j, c->ovl_id, c->dst_offset_x,
 				      c->dst_offset_y, c->dst_width,
@@ -754,6 +754,8 @@ static int rollback_to_GPU(struct drm_mtk_layering_info *info, int disp,
 	for (i = info->gles_head[disp]; i <= info->gles_tail[disp]; i++) {
 		l_info = &info->input_config[disp][i];
 		l_info->ext_sel_layer = -1;
+		if (mtk_has_layer_cap(l_info, MTK_DISP_RSZ_LAYER))
+			l_info->layer_caps &= ~MTK_DISP_RSZ_LAYER;
 	}
 
 	if (info->gles_tail[disp] + 1 < info->layer_num[disp]) {
@@ -1808,9 +1810,30 @@ static int _dispatch_lye_blob_idx(struct drm_mtk_layering_info *disp_info,
 	return 0;
 }
 
-static int dispatch_ovl_id(struct drm_mtk_layering_info *disp_info,
-			   struct mtk_drm_lyeblob_ids *lyeblob_ids,
-			   struct drm_device *drm_dev)
+static inline int get_scale_cnt(struct drm_mtk_layering_info *disp_info)
+{
+	int disp_idx, scale_cnt = 0;
+
+	for (disp_idx = 0; disp_idx < HRT_TYPE_NUM; disp_idx++) {
+		struct drm_mtk_layer_config *c;
+		int i = 0;
+
+		if (disp_info->layer_num[disp_idx] <= 0)
+			continue;
+
+		/* check exist clear layer */
+		for (i = 0; i < disp_info->layer_num[disp_idx]; i++) {
+			c = &disp_info->input_config[disp_idx][i];
+			if (mtk_has_layer_cap(c, MTK_DISP_RSZ_LAYER))
+				scale_cnt++;
+		}
+	}
+
+	return scale_cnt;
+}
+
+static int dispatch_gles_range(struct drm_mtk_layering_info *disp_info,
+			struct drm_device *drm_dev)
 {
 	int disp_idx;
 	bool no_disp = true;
@@ -1857,6 +1880,27 @@ static int dispatch_ovl_id(struct drm_mtk_layering_info *disp_info,
 
 	clear_layer(disp_info, drm_dev);
 
+	return 0;
+}
+
+static int dispatch_ovl_id(struct drm_mtk_layering_info *disp_info,
+			   struct mtk_drm_lyeblob_ids *lyeblob_ids,
+			   struct drm_device *drm_dev)
+{
+	bool no_disp = true;
+	int disp_idx;
+
+	for (disp_idx = 0; disp_idx < HRT_TYPE_NUM; disp_idx++)
+		if (disp_info->layer_num[disp_idx] > 0) {
+			no_disp = false;
+			break;
+		}
+
+	if (no_disp) {
+		DDPINFO("There is no disp need dispatch\n");
+		return 0;
+	}
+
 	/* Dispatch OVL id */
 	for (disp_idx = 0; disp_idx < HRT_TYPE_NUM; disp_idx++) {
 		int ovl_cnt;
@@ -1868,6 +1912,7 @@ static int dispatch_ovl_id(struct drm_mtk_layering_info *disp_info,
 		if (disp_info->layer_num[disp_idx] <= 0)
 			continue;
 
+		/* check exist clear layer */
 		for (i = 0; i < disp_info->layer_num[disp_idx]; i++) {
 			c = &disp_info->input_config[disp_idx][i];
 			if (mtk_has_layer_cap(c, MTK_DISP_CLIENT_CLEAR_LAYER)) {
@@ -2052,7 +2097,8 @@ _copy_layer_info_by_disp(struct drm_mtk_layering_info *disp_info_user,
 	unsigned long int layer_size = 0;
 	int ret = 0;
 
-	if (l_info->layer_num[disp_idx] <= 0) {
+	if (l_info->layer_num[disp_idx] <= 0 ||
+			l_info->layer_num[disp_idx] > DISP_LAYER_RULE_MAX_NUM) {
 		/* direct skip */
 		return -EFAULT;
 	}
@@ -2705,6 +2751,12 @@ static int layering_rule_start(struct drm_mtk_layering_info *disp_info_user,
 
 	lyeblob_ids = kzalloc(sizeof(struct mtk_drm_lyeblob_ids), GFP_KERNEL);
 
+	dispatch_gles_range(&layering_info, dev);
+
+	/* adjust scenario after dispatch gles range */
+	scale_num = get_scale_cnt(&layering_info);
+	l_rule_ops->scenario_decision(scn_decision_flag, scale_num);
+
 	ret = dispatch_ovl_id(&layering_info, lyeblob_ids, dev);
 
 	check_layering_result(&layering_info);
@@ -3159,19 +3211,23 @@ int mtk_layering_rule_ioctl(struct drm_device *dev, void *data,
 
 #if IS_ENABLED(CONFIG_COMPAT)
 struct drm_mtk_layering_info_32 {
-	compat_uptr_t input_config[3];
-	int disp_mode[3];
+	compat_uptr_t input_config[LYE_CRTC];
+	int disp_mode[LYE_CRTC];
 	/* index of crtc display mode including resolution, fps... */
-	int disp_mode_idx[3];
-	int layer_num[3];
-	int gles_head[3];
-	int gles_tail[3];
+	int disp_mode_idx[LYE_CRTC];
+	int layer_num[LYE_CRTC];
+	int gles_head[LYE_CRTC];
+	int gles_tail[LYE_CRTC];
 	int hrt_num;
+#ifndef CONFIG_DRM_MEDIATEK_LEGACY
+	uint32_t disp_idx;
+	uint32_t disp_list;
+#endif
 	/* res_idx: SF/HWC selects which resolution to use */
 	int res_idx;
 	uint32_t hrt_weight;
 	uint32_t hrt_idx;
-	compat_uptr_t mml_frame_info[3];
+	compat_uptr_t mml_frame_info[LYE_CRTC];
 };
 
 int mtk_layering_rule_ioctl_compat(struct file *file, unsigned int cmd,
@@ -3183,7 +3239,7 @@ int mtk_layering_rule_ioctl_compat(struct file *file, unsigned int cmd,
 
 	if (copy_from_user(&data32, (void __user *)arg, sizeof(data32)))
 		return -EFAULT;
-	for (i = 0; i < 3; i++) {
+	for (i = 0; i < LYE_CRTC; i++) {
 		data.input_config[i] = compat_ptr(data32.input_config[i]);
 		data.disp_mode[i] = data32.disp_mode[i];
 		data.disp_mode_idx[i] = data32.disp_mode_idx[i];
@@ -3192,6 +3248,10 @@ int mtk_layering_rule_ioctl_compat(struct file *file, unsigned int cmd,
 		data.gles_tail[i] = data32.gles_tail[i];
 	}
 	data.hrt_num = data32.hrt_num;
+#ifndef CONFIG_DRM_MEDIATEK_LEGACY
+	data.disp_idx = data32.disp_idx;
+	data.disp_list = data32.disp_list;
+#endif
 	data.res_idx = data32.res_idx;
 	data.hrt_weight = data32.hrt_weight;
 	data.hrt_idx = data32.hrt_idx;
@@ -3201,7 +3261,7 @@ int mtk_layering_rule_ioctl_compat(struct file *file, unsigned int cmd,
 	if (err)
 		return err;
 
-	for (i = 0; i < 3; i++) {
+	for (i = 0; i < LYE_CRTC; i++) {
 		//data32.input_config[i] = ptr_to_compat(data.input_config[i]);
 		data32.disp_mode[i] = data.disp_mode[i];
 		data32.disp_mode_idx[i] = data.disp_mode_idx[i];
@@ -3210,6 +3270,10 @@ int mtk_layering_rule_ioctl_compat(struct file *file, unsigned int cmd,
 		data32.gles_tail[i] = data.gles_tail[i];
 	}
 	data32.hrt_num = data.hrt_num;
+#ifndef CONFIG_DRM_MEDIATEK_LEGACY
+	data32.disp_idx = data.disp_idx;
+	data32.disp_list = data.disp_list;
+#endif
 	data32.res_idx = data.res_idx;
 	data32.hrt_weight = data.hrt_weight;
 	data32.hrt_idx = data.hrt_idx;

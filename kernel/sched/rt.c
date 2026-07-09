@@ -267,8 +267,7 @@ static void pull_rt_task(struct rq *this_rq);
 static inline bool need_pull_rt_task(struct rq *rq, struct task_struct *prev)
 {
 	/* Try to pull RT tasks here if we lower this rq's prio */
-	return rq->rt.highest_prio.curr > prev->prio &&
-		 !cpu_isolated(cpu_of(rq));
+	return rq->rt.highest_prio.curr > prev->prio;
 }
 
 static inline int rt_overloaded(struct rq *rq)
@@ -905,11 +904,6 @@ static int do_sched_rt_period_timer(struct rt_bandwidth *rt_b, int overrun)
 				rt_rq->rt_throttled = 0;
 				enqueue = 1;
 
-#ifdef CONFIG_MTK_SCHED_EXTENSION
-				printk_deferred("[name:rt&]sched: RT throttling inactivated cpu=%d\n",
-						i);
-#endif
-
 				/*
 				 * When we're idle and a woken (rt) task is
 				 * throttled check_preempt_curr() will set
@@ -978,11 +972,7 @@ static int sched_rt_runtime_exceeded(struct rt_rq *rt_rq)
 		 */
 		if (likely(rt_b->rt_runtime)) {
 			rt_rq->rt_throttled = 1;
-#ifdef CONFIG_MTK_SCHED_EXTENSION
-			printk_deferred("[name:rt&]sched: RT throttling activated\n");
-#else
 			printk_deferred_once("sched: RT throttling activated\n");
-#endif
 		} else {
 			/*
 			 * In case we did anyway, make it go away,
@@ -1459,8 +1449,7 @@ select_task_rq_rt(struct task_struct *p, int cpu, int sd_flag, int flags,
 	bool test;
 
 	/* For anything but wake ups, just return the task_cpu */
-	if (sd_flag != SD_BALANCE_WAKE && sd_flag != SD_BALANCE_FORK
-			&& !cpu_isolated(cpu))
+	if (sd_flag != SD_BALANCE_WAKE && sd_flag != SD_BALANCE_FORK)
 		goto out;
 
 	rq = cpu_rq(cpu);
@@ -1506,7 +1495,7 @@ select_task_rq_rt(struct task_struct *p, int cpu, int sd_flag, int flags,
 	       unlikely(rt_task(curr)) &&
 	       (curr->nr_cpus_allowed < 2 || curr->prio <= p->prio);
 
-	if (test || !rt_task_fits_capacity(p, cpu) || cpu_isolated(cpu)) {
+	if (test || !rt_task_fits_capacity(p, cpu)) {
 #endif
 		int target = find_lowest_rq(p);
 
@@ -1522,8 +1511,7 @@ select_task_rq_rt(struct task_struct *p, int cpu, int sd_flag, int flags,
 		 * not running a lower priority task.
 		 */
 		if (target != -1 &&
-		    p->prio < cpu_rq(target)->rt.highest_prio.curr &&
-			!cpu_isolated(target))
+		    p->prio < cpu_rq(target)->rt.highest_prio.curr)
 			cpu = target;
 	}
 
@@ -1531,9 +1519,6 @@ out_unlock:
 	rcu_read_unlock();
 
 out:
-#ifdef CONFIG_MTK_SCHED_CPU_PREFER
-	cpu = select_task_prefer_cpu(p, cpu);
-#endif
 	return cpu;
 }
 
@@ -1778,11 +1763,11 @@ static int find_lowest_rq(struct task_struct *task)
 
 #ifdef CONFIG_MTK_SCHED_INTEROP
 	/* Choose task_cpu if it is idle and it fits lowest_mask */
-	if (cpumask_test_cpu(cpu, lowest_mask) && idle_cpu(cpu) &&
+	if (cpumask_test_cpu(cpu, lowest_mask) &&
 #if defined(CONFIG_ENERGY_MODEL) && defined(CONFIG_CPU_FREQ_GOV_SCHEDUTIL)
 		cpu_is_slowest(cpu) &&
 #endif
-		!cpu_isolated(cpu))
+		idle_cpu(cpu))
 		return cpu;
 
 	if (pod_is_ready()) {
@@ -1793,7 +1778,7 @@ static int find_lowest_rq(struct task_struct *task)
 		for (i = 0; i < domain_cnt; i++) {
 			for_each_cpu(iter_cpu, &tmp_domain[i]->possible_cpus) {
 				if (cpumask_test_cpu(iter_cpu, lowest_mask) &&
-					idle_cpu(iter_cpu) && !cpu_isolated(iter_cpu))
+					idle_cpu(iter_cpu))
 					return iter_cpu;
 			}
 		}
@@ -1828,15 +1813,14 @@ static int find_lowest_rq(struct task_struct *task)
 			 * remote processor.
 			 */
 			if (this_cpu != -1 &&
-			    cpumask_test_cpu(this_cpu, sched_domain_span(sd)) &&
-				!cpu_isolated(this_cpu)) {
+			    cpumask_test_cpu(this_cpu, sched_domain_span(sd))) {
 				rcu_read_unlock();
 				return this_cpu;
 			}
 
 			best_cpu = cpumask_first_and(lowest_mask,
 						     sched_domain_span(sd));
-			if (best_cpu < nr_cpu_ids && !cpu_isolated(best_cpu)) {
+			if (best_cpu < nr_cpu_ids) {
 				rcu_read_unlock();
 				return best_cpu;
 			}
@@ -1849,11 +1833,11 @@ static int find_lowest_rq(struct task_struct *task)
 	 * just give the caller *something* to work with from the compatible
 	 * locations.
 	 */
-	if (this_cpu != -1 && !cpu_isolated(this_cpu))
+	if (this_cpu != -1)
 		return this_cpu;
 
 	cpu = cpumask_any(lowest_mask);
-	if (cpu < nr_cpu_ids && !cpu_isolated(cpu))
+	if (cpu < nr_cpu_ids)
 		return cpu;
 
 	return -1;
@@ -2089,6 +2073,7 @@ static void push_rt_tasks(struct rq *rq)
  */
 static int rto_next_cpu(struct root_domain *rd)
 {
+	int this_cpu = smp_processor_id();
 	int next;
 	int cpu;
 
@@ -2111,6 +2096,10 @@ static int rto_next_cpu(struct root_domain *rd)
 		cpu = cpumask_next(rd->rto_cpu, rd->rto_mask);
 
 		rd->rto_cpu = cpu;
+
+		/* Do not send IPI to self */
+		if (cpu == this_cpu)
+			continue;
 
 		if (cpu < nr_cpu_ids)
 			return cpu;
@@ -2364,8 +2353,7 @@ static void switched_from_rt(struct rq *rq, struct task_struct *p)
 	 * we may need to handle the pulling of RT tasks
 	 * now.
 	 */
-	if (!task_on_rq_queued(p) || rq->rt.rt_nr_running ||
-		cpu_isolated(cpu_of(rq)))
+	if (!task_on_rq_queued(p) || rq->rt.rt_nr_running)
 		return;
 
 	rt_queue_pull_task(rq);
@@ -2843,9 +2831,8 @@ static void sched_rt_do_global(void)
 	raw_spin_unlock_irqrestore(&def_rt_bandwidth.rt_runtime_lock, flags);
 }
 
-int sched_rt_handler(struct ctl_table *table, int write,
-		void __user *buffer, size_t *lenp,
-		loff_t *ppos)
+int sched_rt_handler(struct ctl_table *table, int write, void *buffer,
+		size_t *lenp, loff_t *ppos)
 {
 	int old_period, old_runtime;
 	static DEFINE_MUTEX(mutex);
@@ -2883,9 +2870,8 @@ undo:
 	return ret;
 }
 
-int sched_rr_handler(struct ctl_table *table, int write,
-		void __user *buffer, size_t *lenp,
-		loff_t *ppos)
+int sched_rr_handler(struct ctl_table *table, int write, void *buffer,
+		size_t *lenp, loff_t *ppos)
 {
 	int ret;
 	static DEFINE_MUTEX(mutex);

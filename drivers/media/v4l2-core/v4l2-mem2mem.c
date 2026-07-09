@@ -1186,4 +1186,3 @@ __poll_t v4l2_m2m_fop_poll(struct file *file, poll_table *wait)
 	return ret;
 }
 EXPORT_SYMBOL_GPL(v4l2_m2m_fop_poll);
-

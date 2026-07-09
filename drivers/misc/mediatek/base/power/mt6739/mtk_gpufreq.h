@@ -101,12 +101,6 @@ extern int mt_gpufreq_fan53555_init(void);
 #ifdef CONFIG_THERMAL
 extern int mtk_gpufreq_register(struct mt_gpufreq_power_table_info *freqs, int num);
 #endif
-/* #ifdef MT_GPUFREQ_AEE_RR_REC */
-extern void aee_rr_rec_gpu_dvfs_vgpu(u8 val);
-extern void aee_rr_rec_gpu_dvfs_oppidx(u8 val);
-extern void aee_rr_rec_gpu_dvfs_status(u8 val);
-extern u8 aee_rr_curr_gpu_dvfs_status(void);
-/* #endif */
 
 /*****************
  * power limit notification

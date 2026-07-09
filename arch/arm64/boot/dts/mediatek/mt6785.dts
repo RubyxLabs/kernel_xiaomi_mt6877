@@ -571,6 +571,12 @@ page_owner=on loop.max_part=7";
 			clock-frequency = <26000000>;
 		};
 
+		clk13m: clk13m {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <13000000>;
+		};
+
 		clk32k: clk32k {
 			compatible = "fixed-clock";
 			#clock-cells = <0>;
@@ -665,16 +671,16 @@ page_owner=on loop.max_part=7";
 		dvfsrc-opp-num = <6>;
 		dvfs-opp =
 			/*vcore		vsram	uv	rc  spm		freq	mux*/
-			< 575000	800000	0xff	0x0 0x0		110	0>,
-			< 600000	800000	0xff	0x0 0x0		130	0>,
+			< 575000	800000	0xff	0x0 0x0		110	1>,
+			< 600000	800000	0xff	0x0 0x0		130	1>,
 			< 650000	850000	0xff	0x0 0x1		165	2>,
 			< 650000	850000	0xff	0x0 0x1		218	5>,
 			< 700000	850000	0xff	0x1 0x12	330	2>,
 			< 800000	900000	0xff	0x2 0x28	416	4>;
 
 
-/*		sshub-vcore-supply = <&mt_pmic_vcore_sshub_buck_reg>;*/
-/*		sshub-vsram-supply = <&mt_pmic_vsram_others_sshub_ldo_reg>;*/
+		sshub-vcore-supply = <&mt_pmic_vcore_sshub_buck_reg>;
+		sshub-vsram-supply = <&mt_pmic_vsram_others_sshub_ldo_reg>;
 
 		gpio = <&gpio 1>;
 		gpio-feature = "gpio-mode";
@@ -775,7 +781,7 @@ page_owner=on loop.max_part=7";
 			"syscon", "simple-mfd";
 		reg = <0 0x10007000 0 0x1000>;
 		interrupts = <GIC_SPI 72 IRQ_TYPE_LEVEL_LOW>;
-		mediatek,rg_dfd_timeout = <0x1ffff>;
+		mediatek,rg_dfd_timeout = <0xa0>;
 		#reset-cells = <1>;
 		reboot-mode {
 			compatible = "syscon-reboot-mode";
@@ -790,14 +796,6 @@ page_owner=on loop.max_part=7";
 			mode-meta = <BOOT_META>;
 			mode-rpmbpk = <BOOT_RPMBPK>;
 		};
-	};
-
-	apxgpt@10008000 {
-		compatible = "mediatek,apxgpt";
-		reg = <0 0x10008000 0 0x1000>;
-		interrupts = <GIC_SPI 203 IRQ_TYPE_LEVEL_LOW>;
-		clocks =
-			<&clk32k>;
 	};
 
 	rsvd@10009000 {
@@ -993,12 +991,13 @@ page_owner=on loop.max_part=7";
 		      <0 0x0800000c 0 0x0004>;
 	};
 
-	sys_timer@10017000 {
-		compatible = "mediatek,sys_timer";
+	systimer: systimer@10017000 {
+		compatible = "mediatek,mt6768-timer",
+			      "mediatek,mt6765-timer",
+			      "mediatek,sys_timer";
 		reg = <0 0x10017000 0 0x1000>;
-		reg-names = "sys_timer_base";
 		interrupts = <GIC_SPI 224 IRQ_TYPE_LEVEL_HIGH>;
-		clocks = <&topckgen TOP_CLK13M>;
+		clocks = <&clk13m>;
 	};
 
 	timer: timer {
@@ -4506,6 +4505,10 @@ page_owner=on loop.max_part=7";
 		compatible = "mediatek,imgsensor";
 	};
 
+	camera_af_hw_node: camera_af_hw_node {
+		compatible = "mediatek,camera_af_lens";
+	};
+
 	flashlight_core: flashlight_core {
 		compatible = "mediatek,flashlight_core";
 	};
@@ -4730,6 +4733,8 @@ page_owner=on loop.max_part=7";
 
 	accdet: accdet {
 		compatible = "mediatek,pmic-accdet";
+		io-channels = <&pmic_auxadc AUXADC_ACCDET>;
+		io-channel-names = "pmic_accdet";
 		/* ACCDET GPIO standardization for AP EINT */
 		/*
 		 *pinctrl-names = "default", "state_eint_as_int";
@@ -4756,6 +4761,16 @@ page_owner=on loop.max_part=7";
 		bootmode = <&chosen>;
 		gauge_name = "gauge";
 		alias_name = "MT6359";
+		io-channels = <&pmic_auxadc AUXADC_BAT_TEMP>,
+			<&pmic_auxadc AUXADC_BATADC>,
+			<&pmic_auxadc AUXADC_VBIF>,
+			<&pmic_auxadc AUXADC_IMP>,
+			<&pmic_auxadc AUXADC_IMIX_R>;
+		io-channel-names = "pmic_battery_temp",
+			"pmic_battery_voltage",
+			"pmic_bif_voltage",
+			"pmic_ptim_voltage",
+			"pmic_ptim_r";
 	};
 
 	gauge_timer {
@@ -4870,6 +4885,11 @@ page_owner=on loop.max_part=7";
 		mt6382_nfc_srclk = <&pio 25 0x0>;
 		status = "okay";
 	};
+
+	mtee_svp: mtee_svp {
+		compatible = "medaitek,svp";
+	};
+	/* svp end */
 
 	disp_ovl0@14008000 {
 		compatible = "mediatek,disp_ovl0";

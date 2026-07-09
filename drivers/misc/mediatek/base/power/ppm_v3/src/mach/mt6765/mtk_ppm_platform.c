@@ -66,7 +66,7 @@ static int ppm_cpu_freq_callback(struct notifier_block *nb,
 {
 	struct ppm_cluster_status cl_status[NR_PPM_CLUSTERS] = { {0} };
 	struct cpufreq_freqs *freq = data;
-	int cpu = freq->cpu;
+	int cpu = freq->policy->cpu;
 	int i, is_root_cpu = 0;
 
 	if (freq->flags & CPUFREQ_CONST_LOOPS)
@@ -362,7 +362,7 @@ unsigned int get_cluster_ptpod_fix_freq_idx(unsigned int id)
 {
 	int val = mt_cpufreq_get_cpu_level();
 
-	if (val == 5 || val == 8)
+	if (val == 5 || val >= 8)
 		return PTPOD_FREQ_IDX_LY;
 	else
 		return PTPOD_FREQ_IDX;

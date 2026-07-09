@@ -31,16 +31,11 @@ static inline unsigned long map_util_freq(unsigned long util,
 }
 
 #ifdef CONFIG_NONLINEAR_FREQ_CTL
-extern unsigned int capacity_margin;
 extern unsigned int mt_cpufreq_get_cpu_freq(int cpu, int idx);
 __attribute__((unused)) static unsigned long mtk_map_util_freq(int cpu, unsigned long util)
 {
 	struct upower_tbl *tbl;
 	int idx, cap, target_idx = 0;
-
-#ifdef CONFIG_MTK_SCHED_EXTENSION
-	util = util * capacity_margin / SCHED_CAPACITY_SCALE;
-#endif
 
 	tbl = upower_get_core_tbl(cpu);
 	for (idx = 0; idx < tbl->row_num ; idx++) {

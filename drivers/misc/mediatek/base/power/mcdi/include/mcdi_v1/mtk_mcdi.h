@@ -7,6 +7,7 @@
 #define __MTK_MCDI_H__
 
 #include <linux/arm-smccc.h>
+#include <mt-plat/mboot_params.h>
 
 #ifdef CONFIG_ARM64
 #define MTK_SIP_SMC_AARCH_BIT                   0x40000000
@@ -30,7 +31,6 @@ enum {
 	NF_MCDI_SMC_EVENT
 };
 
-extern void aee_rr_rec_mcdi_val(int id, unsigned int val);
 extern unsigned long long notrace sched_clock(void);
 
 /* mtk_menu */

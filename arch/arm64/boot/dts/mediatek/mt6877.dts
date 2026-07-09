@@ -31,7 +31,6 @@
 	chosen: chosen {
 		bootargs = "console=tty0 console=ttyS0,921600n1 root=/dev/ram \
 			vmalloc=400M slub_debug=OFZPU swiotlb=noforce \
-			initcall_debug=1 \
 			firmware_class.path=/vendor/firmware \
 			page_owner=on loop.max_part=7";
 			kaslr-seed = <0 0>;
@@ -1595,6 +1594,11 @@
 		compatible = "mediatek,irq_nfc-eint";
 	};
 
+	mtee_svp: mtee_svp {
+		compatible = "medaitek,svp";
+	};
+	/* svp end */
+
 	gpio_usage_mapping:gpio_usage_mapping {
 		compatible = "mediatek,gpio_usage_mapping";
 	};
@@ -2268,6 +2272,10 @@
 		eem-offset-big = <0xff>;
 		eem-offset-cci = <0xff>;
 		eem-offset-gpu = <0xff>;
+		nvmem = <&efuse>;
+		nvmem-names = "mtk_efuse";
+		nvmem-cells = <&efuse_segment>;
+		nvmem-cell-names = "efuse_segment_cell";
 		proc1-supply = <&mt6315_6_vbuck1>;
 		proc2-supply = <&mt6315_6_vbuck3>;
 	};
@@ -2473,7 +2481,7 @@
 						<0 0>;
 
 		vcc-supply = <&mt_pmic_vemc_ldo_reg>;
-		vccq2-supply = <&mt_pmic_vufs_ldo_reg>;
+		vcc-fixed-regulator;
 
 		resets = <&infracfg_rst 0>, <&infracfg_rst 1>,
 				 <&infracfg_rst 2>;
@@ -2482,8 +2490,6 @@
 		/* Reference clock control mode */
 		/* SW mode: 0, Half-HW mode: 1, HW mode: 2 */
 		mediatek,refclk_ctrl = <2>;
-
-		mediatek,ufs-qos;
 	};
 
 	msdc1_ins:msdc1_ins {
@@ -2884,19 +2890,19 @@
 				<30>; /* in_size */
 
 		/* feature, frequecy, coreid */
-		scp_feature_tbl = < 0   5 1>,	/* vow */
+		scp_feature_tbl = < 0   5 0>,	/* vow */
 				  < 1  29 0>,	/* sensor */
 				  < 2  26 0>,	/* flp */
 				  < 3   0 0>,	/* rtos */
-				  < 4 200 1>,	/* speaker */
+				  < 4 200 0>,	/* speaker */
 				  < 5   0 0>,	/* vcore */
-				  < 6 120 1>,	/* barge in */
-				  < 7  10 1>,	/* vow dump */
-				  < 8  80 1>,	/* vow vendor M */
-				  < 9  43 1>,	/* vow vendor A */
-				  <10  22 1>,	/* vow vendor G */
-				  <11  20 1>,	/* vow dual mic */
-				  <12 135 1>,	/* vow dual mic barge in */
+				  < 6 120 0>,	/* barge in */
+				  < 7  10 0>,	/* vow dump */
+				  < 8  80 0>,	/* vow vendor M */
+				  < 9  43 0>,	/* vow vendor A */
+				  <10  22 0>,	/* vow vendor G */
+				  <11  20 0>,	/* vow dual mic */
+				  <12 135 0>,	/* vow dual mic barge in */
 				  <13 200 0>;	/* ultrasound */
 
 		secure_dump = "disable";	/* disabled in default */
@@ -2904,11 +2910,11 @@
 
 		scp_mem_key = "mediatek,reserve-memory-scp_share";
 		scp_mem_tbl = <0 0x0>, /* secure dump, its size is in secure_dump_size */
-			      <1 0x4E300>, /* vow */
+			      <1 0x4e300>, /* vow */
 			      <2 0x100000>, /* sensor */
 			      <3 0x180000>, /* logger */
 			      <4 0x19000>, /* audio */
-			      <12 0x19000>; /* ultrasound*/
+			      <7 0x19000>; /* ultrasound*/
 
 		memorydump =
 		<0x100000>, /* l2tcm */
@@ -3135,7 +3141,7 @@
 		mediatek,check_dfd_support = <1>;
 		mediatek,dfd_infra_base = <0x34>;
 		mediatek,dfd_ap_addr_offset = <24>;
-		mediatek,dfd_latch_offset = <0x48>;
+		mediatek,dfd_latch_offset = <0x44>;
 	};
 
 	dfd_cache: dfd_cache {
@@ -3211,6 +3217,13 @@
                 efuse_segment: segment@78 {
                         reg = <0x78 0x4>;
                 };
+				u3_phy_data: u3_phy_data {
+					reg = <0x1ac 0x4>;
+				};
+
+				u2_phy_data: u2_phy_data {
+					reg = <0x1b0 0x4>;
+				};
         };
 
 	dcm: dcm@10001000 {
@@ -4860,6 +4873,10 @@
 		#clock-cells = <1>;
 	};
 
+	connfem: connfem@18000000 {
+		compatible = "mediatek,mt6877-connfem";
+	};
+
 	wifi: wifi@18000000 {
 		compatible = "mediatek,wifi";
 		reg = <0 0x18000000 0 0x700000>;
@@ -6091,12 +6108,20 @@
 			mediatek,host-eye-term = <6>; /* 0~7 */
 			mediatek,host-eye-rev6 = <1>; /* 0~3 */
 			mediatek,host-eye-disc = <7>; /* 0~8 */
+			mediatek,rx-sqth = <0x5>;
+			mediatek,rev4 = <0x1>;
+			nvmem-cells = <&u2_phy_data>;
+			nvmem-cell-names = "intr_cal";
+			nvmem-cell-masks = <0x1f>;
 			status = "okay";
 		};
 
 		u3port0: usb3-phy0@11e40700 {
 			reg = <0 0x11e40700 0 0x900>;
 			#phy-cells = <1>;
+			nvmem-cells = <&u3_phy_data>, <&u3_phy_data>, <&u3_phy_data>;
+			nvmem-cell-names = "iext_intr_ctrl", "rx_impsel", "tx_impsel";
+			nvmem-cell-masks = <0x3f0000 0x1f00 0x1f>;
 			status = "okay";
 		};
 	};
@@ -6791,8 +6816,5 @@
 #ifdef CONFIG_MTK_ENABLE_GENIEZONE
 #include "mediatek/trusty.dtsi"
 #endif
+#include "mediatek/cust_mt6877_connfem.dtsi"
 
-&mt_pmic_vemc_ldo_reg {
-	regulator-min-microvolt = <3000000>;
-	regulator-max-microvolt = <3000000>;
-};

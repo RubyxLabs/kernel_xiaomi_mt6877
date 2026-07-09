@@ -740,7 +740,7 @@ target_khz, target_volt, num_online_cpus(), cur_khz);
 	freqs.old = cur_khz;
 	freqs.new = target_khz_orig;
 	if (policy) {
-		freqs.cpu = policy->cpu;
+		freqs.policy->cpu = policy->cpu;
 		cpufreq_freq_transition_begin(policy, &freqs);
 	}
 
@@ -867,9 +867,11 @@ static void _mt_cpufreq_set(struct cpufreq_policy *policy,
 void _mt_cpufreq_dvfs_request_wrapper(struct mt_cpu_dvfs *p, int new_opp_idx,
 	enum mt_cpu_dvfs_action_id action, void *data)
 {
-	unsigned long flags, para_flags;
+	unsigned long flags;
+#ifndef CONFIG_HYBRID_CPU_DVFS
 	struct mt_cpu_dvfs *pp;
-	int i, ignore_ppm = 0;
+#endif
+	int i;
 	/* PTP related */
 	unsigned int **volt_tbl;
 	struct buck_ctrl_t *vproc_p;
@@ -887,45 +889,6 @@ void _mt_cpufreq_dvfs_request_wrapper(struct mt_cpu_dvfs *p, int new_opp_idx,
 			_mt_cpufreq_set(p->mt_policy, p, new_opp_idx, action);
 		}
 #endif
-		break;
-	case MT_CPU_DVFS_PPM:
-		cpufreq_ver("DVFS - MT_CPU_DVFS_PPM\n");
-		for_each_cpu_dvfs_only(i, pp) {
-			if (pp->armpll_is_available &&
-			pp->mt_policy->governor) {
-				cpufreq_para_lock(para_flags);
-				if (pp->idx_opp_ppm_limit == -1)
-					pp->mt_policy->max =
-					cpu_dvfs_get_max_freq(pp);
-				else
-					pp->mt_policy->max =
-					cpu_dvfs_get_freq_by_idx(pp,
-					pp->idx_opp_ppm_limit);
-				if (pp->idx_opp_ppm_base == -1)
-					pp->mt_policy->min =
-					cpu_dvfs_get_min_freq(pp);
-				else
-					pp->mt_policy->min =
-					cpu_dvfs_get_freq_by_idx(pp,
-					pp->idx_opp_ppm_base);
-
-				ignore_ppm = 0;
-				if ((pp->idx_opp_tbl >= pp->mt_policy->max) &&
-				(pp->idx_opp_tbl <= pp->mt_policy->min)) {
-					cpufreq_ver
-		("idx = %d, idx_opp_ppm_base = %d, idx_opp_ppm_limit = %d\n",
-					pp->idx_opp_tbl, pp->mt_policy->min,
-					pp->mt_policy->max);
-					ignore_ppm = 1;
-				}
-
-				cpufreq_para_unlock(para_flags);
-				/* new_opp_idx == current idx */
-				if (!ignore_ppm)
-					_mt_cpufreq_set(pp->mt_policy, pp,
-					pp->idx_opp_tbl, action);
-			}
-		}
 		break;
 	case MT_CPU_DVFS_EEM_UPDATE:
 		volt_tbl = (unsigned int **)data;
@@ -1106,51 +1069,13 @@ static void ppm_limit_callback(struct ppm_client_req req)
 				ppm->cpu_limit[i].min_cpufreq_idx,
 				ppm->cpu_limit[i].max_cpufreq_idx);
 	}
-#else
-	unsigned long flags;
-	struct mt_cpu_dvfs *p;
-
-	cpufreq_ver("get feedback from PPM module\n");
-
-	cpufreq_para_lock(flags);
-	for (i = 0; i < ppm->cluster_num; i++) {
-		cpufreq_ver
-("[%d]:cluster_id=%d,cpu_id=%d,min_cpufreq_idx=%d,max_cpufreq_idx=%d\n",
-			i, ppm->cpu_limit[i].cluster_id,
-			ppm->cpu_limit[i].cpu_id,
-			ppm->cpu_limit[i].min_cpufreq_idx,
-			ppm->cpu_limit[i].max_cpufreq_idx);
-		cpufreq_ver("has_advise_freq = %d, advise_cpufreq_idx = %d\n",
-			ppm->cpu_limit[i].has_advise_freq,
-			ppm->cpu_limit[i].advise_cpufreq_idx);
-
-		p = id_to_cpu_dvfs(i);
-
-		if (ppm->cpu_limit[i].has_advise_freq) {
-			p->idx_opp_ppm_base =
-			ppm->cpu_limit[i].advise_cpufreq_idx;
-			p->idx_opp_ppm_limit =
-			ppm->cpu_limit[i].advise_cpufreq_idx;
-		} else {
-			p->idx_opp_ppm_base =
-			ppm->cpu_limit[i].min_cpufreq_idx;
-			/* ppm update base */
-			p->idx_opp_ppm_limit =
-			ppm->cpu_limit[i].max_cpufreq_idx;
-			/* ppm update limit */
-		}
-	}
-	cpufreq_para_unlock(flags);
-
-	/* Don't care the parameters */
-	_mt_cpufreq_dvfs_request_wrapper(NULL, 0, MT_CPU_DVFS_PPM, NULL);
 #endif
 }
 
 /*
  * cpufreq driver
  */
-static int _mt_cpufreq_verify(struct cpufreq_policy *policy)
+static int _mt_cpufreq_verify(struct cpufreq_policy_data *policy)
 {
 	struct mt_cpu_dvfs *p;
 	int ret; /* cpufreq_frequency_table_verify() always return 0 */
@@ -1160,6 +1085,16 @@ static int _mt_cpufreq_verify(struct cpufreq_policy *policy)
 		return -EINVAL;
 
 	ret = cpufreq_frequency_table_verify(policy, p->freq_tbl_for_cpufreq);
+
+	if (!ret) {
+		p->idx_opp_ppm_base = cpu_dvfs_get_idx_by_freq(p, policy->min);
+		p->idx_opp_ppm_limit = cpu_dvfs_get_idx_by_freq(p, policy->max);
+		pr_info("update cpufreq limit idx min %d---max %d,freq min %d ---max %d\n",
+		p->idx_opp_ppm_base,
+		p->idx_opp_ppm_limit,
+		policy->min,
+		policy->max);
+	}
 
 	return ret;
 }
@@ -1189,6 +1124,59 @@ static int _mt_cpufreq_target(struct cpufreq_policy *policy,
 	return 0;
 }
 
+static int mtk_cpufreq_get_cpu_power(unsigned long *power, unsigned long *KHz, int cpu)
+{
+	int j;
+	int ret;
+	int new_opp_idx=-1;
+	enum mt_cpu_dvfs_id cluster;
+	unsigned int lv;
+	u32 cap;
+	u64 tmp, MHz;
+	unsigned long mV;
+	struct opp_tbl_info *opp_tbl_info;
+	struct device_node *np;
+	struct device *cpu_dev;
+
+	cpu_dev = get_cpu_device(cpu);
+	if (!cpu_dev)
+		return -ENODEV;
+
+	np = of_node_get(cpu_dev->of_node);
+	if (!np)
+		return -EINVAL;
+
+	ret = of_property_read_u32(np, "dynamic-power-coefficient", &cap);
+	of_node_put(np);
+	if (ret)
+		return -EINVAL;
+
+	lv = _mt_cpufreq_get_cpu_level();
+
+	cluster = _get_cpu_dvfs_id(cpu);
+	opp_tbl_info = &opp_tbls[cluster][lv];
+
+	for (j = (opp_tbl_info->size-1); j >= 0; j--) {
+		if (opp_tbl_info->opp_tbl[j].cpufreq_khz > *KHz) {
+			new_opp_idx = j;
+			break;
+		}
+	}
+	*KHz = opp_tbl_info->opp_tbl[new_opp_idx].cpufreq_khz;
+	mV = (opp_tbl_info->opp_tbl[new_opp_idx].cpufreq_volt) / 100;
+
+	if (!mV)
+		return -EINVAL;
+
+	MHz = *KHz;
+	do_div(MHz , 1000);
+	tmp = (u64)cap * mV * mV * MHz;
+	do_div(tmp, 1000000000);
+	*power = (unsigned long)tmp;
+	tag_pr_info("Voltage in mV=%u, Frequency in KHz =%u, Power=%u\n", mV, *KHz, *power);
+	return 0;
+}
+
 #ifndef ONE_CLUSTER
 int cci_is_inited;
 #endif
@@ -1199,7 +1187,7 @@ static int _mt_cpufreq_init(struct cpufreq_policy *policy)
 	int pd_ret = -EINVAL;
 	unsigned long flags;
 	struct device *cpu_dev;
-	struct em_data_callback em_cb = EM_DATA_CB(of_dev_pm_opp_get_cpu_power);
+	struct em_data_callback em_cb = EM_DATA_CB(mtk_cpufreq_get_cpu_power);
 
 	FUNC_ENTER(FUNC_LV_MODULE);
 

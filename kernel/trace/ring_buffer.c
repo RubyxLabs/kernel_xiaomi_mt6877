@@ -201,7 +201,7 @@ rb_event_length(struct ring_buffer_event *event)
 	case RINGBUF_TYPE_DATA:
 		return rb_event_data_length(event);
 	default:
-		WARN_ON_ONCE(1);
+		BUG();
 	}
 	/* not hit */
 	return 0;
@@ -257,7 +257,7 @@ rb_event_data(struct ring_buffer_event *event)
 {
 	if (extended_time(event))
 		event = skip_time_extend(event);
-	WARN_ON_ONCE(event->type_len > RINGBUF_TYPE_DATA_TYPE_LEN_MAX);
+	BUG_ON(event->type_len > RINGBUF_TYPE_DATA_TYPE_LEN_MAX);
 	/* If length is in len field, then array[0] has the data */
 	if (event->type_len)
 		return (void *)&event->array[0];
@@ -1878,6 +1878,8 @@ int ring_buffer_resize(struct ring_buffer *buffer, unsigned long size,
 					list) {
 			list_del_init(&bpage->list);
 			free_buffer_page(bpage);
+
+			cond_resched();
 		}
 	}
 	mutex_unlock(&buffer->mutex);
@@ -3683,7 +3685,7 @@ rb_update_read_stamp(struct ring_buffer_per_cpu *cpu_buffer,
 		return;
 
 	default:
-		RB_WARN_ON(cpu_buffer, 1);
+		BUG();
 	}
 	return;
 }
@@ -3713,7 +3715,7 @@ rb_update_iter_read_stamp(struct ring_buffer_iter *iter,
 		return;
 
 	default:
-		RB_WARN_ON(iter->cpu_buffer, 1);
+		BUG();
 	}
 	return;
 }
@@ -4019,7 +4021,7 @@ rb_buffer_peek(struct ring_buffer_per_cpu *cpu_buffer, u64 *ts,
 		return event;
 
 	default:
-		RB_WARN_ON(cpu_buffer, 1);
+		BUG();
 	}
 
 	return NULL;
@@ -4108,7 +4110,7 @@ rb_iter_peek(struct ring_buffer_iter *iter, u64 *ts)
 		return event;
 
 	default:
-		RB_WARN_ON(cpu_buffer, 1);
+		BUG();
 	}
 
 	return NULL;
@@ -5074,9 +5076,9 @@ static __init int rb_write_something(struct rb_test_data *data, bool nested)
 		/* Ignore dropped events before test starts. */
 		if (started) {
 			if (nested)
-				data->bytes_dropped += len;
-			else
 				data->bytes_dropped_nested += len;
+			else
+				data->bytes_dropped += len;
 		}
 		return len;
 	}

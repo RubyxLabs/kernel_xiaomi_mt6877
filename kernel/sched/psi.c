@@ -174,7 +174,7 @@ static u64 psi_period __read_mostly;
 
 /* System-level pressure and stall tracking */
 static DEFINE_PER_CPU(struct psi_group_cpu, system_group_pcpu);
-static struct psi_group psi_system = {
+struct psi_group psi_system = {
 	.pcpu = &system_group_pcpu,
 };
 
@@ -572,11 +572,8 @@ static void psi_schedule_poll_work(struct psi_group *group, unsigned long delay)
 	 * kworker might be NULL in case psi_trigger_destroy races with
 	 * psi_task_change (hotpath) which can't use locks
 	 */
-	if (likely(kworker)) {
-		lockdep_off();
+	if (likely(kworker))
 		kthread_queue_delayed_work(kworker, &group->poll_work, delay);
-		lockdep_on();
-	}
 	else
 		atomic_set(&group->poll_scheduled, 0);
 

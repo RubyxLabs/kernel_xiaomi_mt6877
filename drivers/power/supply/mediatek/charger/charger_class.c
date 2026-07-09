@@ -1318,6 +1318,15 @@ int charger_dev_cp_set_mode(struct charger_device *charger_dev, int value)
 }
 EXPORT_SYMBOL(charger_dev_cp_set_mode);
 
+int charger_dev_get_ext_chgtyp(struct charger_device *chg_dev)
+{
+	if (chg_dev != NULL && chg_dev->ops != NULL && chg_dev->ops->get_ext_chgtyp)
+		return chg_dev->ops->get_ext_chgtyp(chg_dev);
+
+	return -ENOTSUPP;
+}
+EXPORT_SYMBOL(charger_dev_get_ext_chgtyp);
+
 static DEVICE_ATTR(name, 0444, charger_show_name, NULL);
 
 int charger_dev_set_otg_voltage(struct charger_device *charger_dev, u32 mV)

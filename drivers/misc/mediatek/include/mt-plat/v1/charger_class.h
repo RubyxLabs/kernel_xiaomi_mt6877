@@ -254,6 +254,9 @@ struct charger_ops {
 	/* For SC8561 */
 	int (*enable_adc)(struct charger_device *dev, bool en);
 	int (*cp_set_mode)(struct charger_device *dev, int value);
+
+	/* misc */
+	int (*get_ext_chgtyp)(struct charger_device *);
 };
 
 static inline void *charger_dev_get_drvdata(
@@ -548,5 +551,8 @@ extern	int charger_dev_cp_reset_check(struct charger_device *chg_dev);
 /* For SC8561*/
 extern int charger_dev_enable_adc(struct charger_device *dev, bool en);
 extern int charger_dev_cp_set_mode(struct charger_device *charger_dev, int value);
+
+/* For sgm41516d */
+extern int charger_dev_get_ext_chgtyp(struct charger_device *chg_dev);
 
 #endif /*LINUX_POWER_CHARGER_CLASS_H*/

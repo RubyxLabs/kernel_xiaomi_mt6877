@@ -761,6 +761,9 @@ typedef struct RGXFWIF_FWCOMMONCONTEXT_
 	IMG_UINT32				ui32FWComCtxFlags;
 	IMG_UINT32				ui32Priority;
 	IMG_UINT32				ui32PrioritySeqNum;
+#ifndef CONFIG_MTK_GPU_PVR_LEGACY
+	IMG_UINT32              ui32ServiceCount;
+#endif
 
 	/* References to the host side originators */
 	IMG_UINT32				ui32ServerCommonContextID;			/*!< the Server Common Context */

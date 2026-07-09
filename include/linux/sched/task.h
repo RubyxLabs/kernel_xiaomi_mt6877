@@ -72,12 +72,6 @@ static inline void exit_thread(struct task_struct *tsk)
 #endif
 extern void do_group_exit(int);
 
-#ifdef CONFIG_UCLAMP_TASK
-extern void uclamp_exit_task(struct task_struct *p);
-#else
-static inline void uclamp_exit_task(struct task_struct *p) { }
-#endif /* CONFIG_UCLAMP_TASK */
-
 extern void exit_files(struct task_struct *);
 extern void exit_itimers(struct signal_struct *);
 
@@ -96,13 +90,17 @@ extern void sched_exec(void);
 #define sched_exec()   {}
 #endif
 
-#define get_task_struct(tsk) do { atomic_inc(&(tsk)->usage); } while(0)
+static inline struct task_struct *get_task_struct(struct task_struct *t)
+{
+	refcount_inc(&t->usage);
+	return t;
+}
 
 extern void __put_task_struct(struct task_struct *t);
 
 static inline void put_task_struct(struct task_struct *t)
 {
-	if (atomic_dec_and_test(&t->usage))
+	if (refcount_dec_and_test(&t->usage))
 		__put_task_struct(t);
 }
 

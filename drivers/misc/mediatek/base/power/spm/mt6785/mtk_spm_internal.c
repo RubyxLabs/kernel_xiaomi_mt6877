@@ -207,12 +207,14 @@ unsigned int __spm_output_wake_reason(
 	const struct wake_status *wakesta, bool suspend, const char *scenario)
 {
 	int i;
+#ifdef PRINT_WAKEUP_REASON
 	char buf[LOG_BUF_SIZE] = { 0 };
 	char log_buf[1024] = { 0 };
 	char *local_ptr;
 	int log_size = 0;
-	unsigned int wr = WR_UNKNOWN;
 	unsigned int spm_26M_off_pct = 0;
+#endif
+	unsigned int wr = WR_UNKNOWN;
 
 	if (wakesta->is_abort != 0) {
 		/* add size check for vcoredvfs */
@@ -243,9 +245,11 @@ unsigned int __spm_output_wake_reason(
 	if (wakesta->r12 & R12_PCM_TIMER_EVENT) {
 
 		if (wakesta->wake_misc & WAKE_MISC_PCM_TIMER_EVENT) {
+#ifdef PRINT_WAKEUP_REASON
 			local_ptr = wakesrc_str[0];
 			if ((strlen(buf) + strlen(local_ptr)) < LOG_BUF_SIZE)
 				strncat(buf, local_ptr, strlen(local_ptr));
+#endif
 			wr = WR_PCM_TIMER;
 		}
 	}
@@ -253,86 +257,109 @@ unsigned int __spm_output_wake_reason(
 	if (wakesta->r12 & R12_SPM_TWAM_IRQ_B) {
 
 		if (wakesta->wake_misc & WAKE_MISC_DVFSRC_IRQ) {
+#ifdef PRINT_WAKEUP_REASON
 			local_ptr = " DVFSRC";
 			if ((strlen(buf) + strlen(local_ptr)) < LOG_BUF_SIZE)
 				strncat(buf, local_ptr, strlen(local_ptr));
+#endif
 			wr = WR_DVFSRC;
 		}
 
 		if (wakesta->wake_misc & WAKE_MISC_TWAM_IRQ_B) {
+#ifdef PRINT_WAKEUP_REASON
 			local_ptr = " TWAM";
 			if ((strlen(buf) + strlen(local_ptr)) < LOG_BUF_SIZE)
 				strncat(buf, local_ptr, strlen(local_ptr));
+#endif
 			wr = WR_TWAM;
 		}
 
 		if (wakesta->wake_misc & WAKE_MISC_PMSR_IRQ_B_SET0) {
+#ifdef PRINT_WAKEUP_REASON
 			local_ptr = " PMSR";
 			if ((strlen(buf) + strlen(local_ptr)) < LOG_BUF_SIZE)
 				strncat(buf, local_ptr, strlen(local_ptr));
+#endif
 			wr = WR_PMSR;
 		}
 
 		if (wakesta->wake_misc & WAKE_MISC_PMSR_IRQ_B_SET1) {
+#ifdef PRINT_WAKEUP_REASON
 			local_ptr = " PMSR";
 			if ((strlen(buf) + strlen(local_ptr)) < LOG_BUF_SIZE)
 				strncat(buf, local_ptr, strlen(local_ptr));
+#endif
 			wr = WR_PMSR;
 		}
 
 		if (wakesta->wake_misc & WAKE_MISC_PMSR_IRQ_B_SET2) {
+#ifdef PRINT_WAKEUP_REASON
 			local_ptr = " PMSR";
 			if ((strlen(buf) + strlen(local_ptr)) < LOG_BUF_SIZE)
 				strncat(buf, local_ptr, strlen(local_ptr));
+#endif
 			wr = WR_PMSR;
 		}
 
 		if (wakesta->wake_misc & WAKE_MISC_SPM_ACK_CHK_WAKEUP_0) {
+#ifdef PRINT_WAKEUP_REASON
 			local_ptr = " SPM_ACK_CHK";
 			if ((strlen(buf) + strlen(local_ptr)) < LOG_BUF_SIZE)
 				strncat(buf, local_ptr, strlen(local_ptr));
+#endif
 			wr = WR_SPM_ACK_CHK;
 		}
 
 		if (wakesta->wake_misc & WAKE_MISC_SPM_ACK_CHK_WAKEUP_1) {
+#ifdef PRINT_WAKEUP_REASON
 			local_ptr = " SPM_ACK_CHK";
 			if ((strlen(buf) + strlen(local_ptr)) < LOG_BUF_SIZE)
 				strncat(buf, local_ptr, strlen(local_ptr));
+#endif
 			wr = WR_SPM_ACK_CHK;
 		}
 
 		if (wakesta->wake_misc & WAKE_MISC_SPM_ACK_CHK_WAKEUP_2) {
+#ifdef PRINT_WAKEUP_REASON
 			local_ptr = " SPM_ACK_CHK";
 			if ((strlen(buf) + strlen(local_ptr)) < LOG_BUF_SIZE)
 				strncat(buf, local_ptr, strlen(local_ptr));
+#endif
 			wr = WR_SPM_ACK_CHK;
 		}
 
 		if (wakesta->wake_misc & WAKE_MISC_SPM_ACK_CHK_WAKEUP_3) {
+#ifdef PRINT_WAKEUP_REASON
 			local_ptr = " SPM_ACK_CHK";
 			if ((strlen(buf) + strlen(local_ptr)) < LOG_BUF_SIZE)
 				strncat(buf, local_ptr, strlen(local_ptr));
+#endif
 			wr = WR_SPM_ACK_CHK;
 		}
 
 		if (wakesta->wake_misc & WAKE_MISC_SPM_ACK_CHK_WAKEUP_ALL) {
+#ifdef PRINT_WAKEUP_REASON
 			local_ptr = " SPM_ACK_CHK";
 			if ((strlen(buf) + strlen(local_ptr)) < LOG_BUF_SIZE)
 				strncat(buf, local_ptr, strlen(local_ptr));
+#endif
 			wr = WR_SPM_ACK_CHK;
 		}
 	}
 
 	for (i = 2; i < 32; i++) {
 		if (wakesta->r12 & (1U << i)) {
+#ifdef PRINT_WAKEUP_REASON
 			if ((strlen(buf) + strlen(wakesrc_str[i])) <
 				LOG_BUF_SIZE)
 				strncat(buf, wakesrc_str[i],
 					strlen(wakesrc_str[i]));
+#endif
 
 			wr = WR_WAKE_SRC;
 		}
 	}
+#ifdef PRINT_WAKEUP_REASON
 	WARN_ON(strlen(buf) >= LOG_BUF_SIZE);
 
 	log_size += sprintf(log_buf,
@@ -391,7 +418,7 @@ unsigned int __spm_output_wake_reason(
 		aee_sram_printk("%s", log_buf);
 		printk_deferred("[name:spm&][SPM] %s", log_buf);
 	}
-
+#endif
 	return wr;
 }
 

@@ -1800,8 +1800,7 @@ static long RSC_ioctl(struct file *pFile, unsigned int Cmd, unsigned long Param)
 			if (copy_from_user(&IrqInfo, (void *)Param,
 				sizeof(struct RSC_WAIT_IRQ_STRUCT)) == 0) {
 				/*  */
-				if ((IrqInfo.Type >= RSC_IRQ_TYPE_AMOUNT) ||
-							(IrqInfo.Type < 0)) {
+				if (IrqInfo.Type >= RSC_IRQ_TYPE_AMOUNT) {
 					Ret = -EFAULT;
 					LOG_ERR("invalid type(%d)",
 								IrqInfo.Type);
@@ -1843,8 +1842,7 @@ static long RSC_ioctl(struct file *pFile, unsigned int Cmd, unsigned long Param)
 				LOG_DBG("RSC_CLEAR_IRQ Type(%d)",
 								ClearIrq.Type);
 
-				if ((ClearIrq.Type >= RSC_IRQ_TYPE_AMOUNT) ||
-							(ClearIrq.Type < 0)) {
+				if (ClearIrq.Type >= RSC_IRQ_TYPE_AMOUNT) {
 					Ret = -EFAULT;
 					LOG_ERR("invalid type(%d)",
 								ClearIrq.Type);

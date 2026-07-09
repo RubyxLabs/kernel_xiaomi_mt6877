@@ -233,10 +233,12 @@ unsigned int __spm_output_wake_reason(const struct wake_status *wakesta,
 		const char *scenario)
 {
 	int i;
+#ifdef PRINT_WAKEUP_REASON
 	char buf[LOG_BUF_SIZE] = { 0 };
+	int log_size = 0;
 	char log_buf[1024] = { 0 };
 	char *local_ptr;
-	int log_size = 0;
+#endif
 	unsigned int wr = WR_UNKNOWN;
 
 	if (wakesta->assert_pc != 0) {
@@ -262,34 +264,42 @@ unsigned int __spm_output_wake_reason(const struct wake_status *wakesta,
 
 	if (wakesta->r12 & WAKE_SRC_R12_PCM_TIMER) {
 		if (wakesta->wake_misc & WAKE_MISC_PCM_TIMER) {
+#ifdef PRINT_WAKEUP_REASON
 			local_ptr = " PCM_TIMER";
 			if ((strlen(buf) + strlen(local_ptr)) < LOG_BUF_SIZE)
 				strncat(buf, local_ptr, strlen(local_ptr));
+#endif
 			wr = WR_PCM_TIMER;
 		}
 		if (wakesta->wake_misc & WAKE_MISC_TWAM) {
+#ifdef PRINT_WAKEUP_REASON
 			local_ptr = " TWAM";
 			if ((strlen(buf) + strlen(local_ptr)) < LOG_BUF_SIZE)
 				strncat(buf, local_ptr, strlen(local_ptr));
+#endif
 			wr = WR_WAKE_SRC;
 		}
 		if (wakesta->wake_misc & WAKE_MISC_CPU_WAKE) {
+#ifdef PRINT_WAKEUP_REASON
 			local_ptr = " CPU";
 			if ((strlen(buf) + strlen(local_ptr)) < LOG_BUF_SIZE)
 				strncat(buf, local_ptr, strlen(local_ptr));
+#endif
 			wr = WR_WAKE_SRC;
 		}
 	}
 	for (i = 1; i < 32; i++) {
 		if (wakesta->r12 & (1U << i)) {
+#ifdef PRINT_WAKEUP_REASON
 			if ((strlen(buf) + strlen(wakesrc_str[i])) <
 			    LOG_BUF_SIZE)
 				strncat(buf, wakesrc_str[i],
 					strlen(wakesrc_str[i]));
-
+#endif
 			wr = WR_WAKE_SRC;
 		}
 	}
+#ifdef PRINT_WAKEUP_REASON
 	WARN_ON(strlen(buf) >= LOG_BUF_SIZE);
 
 	log_size += sprintf(log_buf,
@@ -314,7 +324,7 @@ unsigned int __spm_output_wake_reason(const struct wake_status *wakesta,
 	WARN_ON(log_size >= 1024);
 
 	spm_print(suspend, "%s", log_buf);
-
+#endif
 	return wr;
 }
 

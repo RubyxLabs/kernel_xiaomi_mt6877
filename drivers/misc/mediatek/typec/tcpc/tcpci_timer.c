@@ -1237,6 +1237,10 @@ void tcpc_enable_timer(struct tcpc_device *tcpc, uint32_t timer_id)
 
 	tout = tcpc_timer_timeout[timer_id];
 
+	if (tcpc->typec_state == /*typec_try_snk*/11) {
+		printk("mt6370 pd_dbg_info [%s] state match delaytime fixed from %d\n", __func__, tout);
+		tout *= 10;
+	}
 #ifdef CONFIG_USB_PD_RANDOM_FLOW_DELAY
 	if (timer_id == PD_TIMER_DFP_FLOW_DELAY ||
 		timer_id == PD_TIMER_UFP_FLOW_DELAY)
@@ -1362,7 +1366,7 @@ int tcpci_timer_init(struct tcpc_device *tcpc)
 		tcpc->tcpc_timer[i].function = tcpc_timer_call[i];
 	}
 	tcpc->wakeup_wake_lock =
-		wakeup_source_register(&tcpc->dev, "tcpc_wakeup_wake_lock");
+		wakeup_source_register(NULL, "tcpc_wakeup_wake_lock");
 	INIT_DELAYED_WORK(&tcpc->wake_up_work, wake_up_work_func);
 	alarm_init(&tcpc->wake_up_timer, ALARM_REALTIME, tcpc_timer_wakeup);
 

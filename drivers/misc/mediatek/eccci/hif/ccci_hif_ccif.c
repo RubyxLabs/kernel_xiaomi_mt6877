@@ -1836,7 +1836,7 @@ static int ccif_debug(unsigned char hif_id,
 		if (ccif_ctrl->wakeup_ch) {
 			ccif_ctrl->wakeup_count++;
 			CCCI_NOTICE_LOG(-1, TAG,
-				"CCIF_MD wakeup source: (0x%X)(%u)\n",
+				"CCIF_MD wakeup source: (0x%lX)(%u)\n",
 				ccif_ctrl->wakeup_ch, ccif_ctrl->wakeup_count);
 		}
 		if (test_and_clear_bit(AP_MD_CCB_WAKEUP, &ccif_ctrl->wakeup_ch))
@@ -1891,13 +1891,11 @@ static int ccif_late_init(unsigned char hif_id)
 			ccif_ctrl->ap_ccif_irq1_id, ret);
 		return -1;
 	}
-#if (MD_GENERATION >= 6297)
 	ret = irq_set_irq_wake(ccif_ctrl->ap_ccif_irq1_id, 1);
 	if (ret)
 		CCCI_ERROR_LOG(ccif_ctrl->md_id, TAG,
 			"irq_set_irq_wake ccif ap_ccif_irq1_id(%d) error %d\n",
 			ccif_ctrl->ap_ccif_irq1_id, ret);
-#endif
 	/*need compare k5.10*/
 	md_ccif_ring_buf_init(CCIF_HIF_ID);
 	return 0;
@@ -2283,14 +2281,12 @@ static int ccif_hif_hw_init(struct device *dev, struct md_ccif_ctrl *md_ctrl)
 			md_ctrl->ap_ccif_irq0_id, ret);
 		return -1;
 	}
-#if (MD_GENERATION >= 6297)
 	ret = irq_set_irq_wake(md_ctrl->ap_ccif_irq0_id, 1);
 	if (ret){
 		CCCI_ERROR_LOG(md_ctrl->md_id, TAG,
 				"irq_set_irq_wake ccif irq0(%d) error %d\n",
 				md_ctrl->ap_ccif_irq0_id, ret);
 	}
-#endif
 	return 0;
 
 }

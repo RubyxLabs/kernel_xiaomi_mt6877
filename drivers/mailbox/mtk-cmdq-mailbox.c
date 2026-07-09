@@ -167,7 +167,9 @@ struct cmdq {
 	spinlock_t		lock;
 	u32			token_cnt;
 	u16			*tokens;
+#if IS_ENABLED(CONFIG_MMPROFILE)
 	struct cmdq_mmp_event	mmp;
+#endif
 	void			*init_cmds_base;
 	dma_addr_t		init_cmds;
 	dma_addr_t		dma_pa;

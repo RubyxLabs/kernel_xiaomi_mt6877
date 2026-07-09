@@ -134,6 +134,7 @@ void mtk_merge_dump(struct mtk_ddp_comp *comp)
 
 int mtk_merge_analysis(struct mtk_ddp_comp *comp)
 {
+#define LEN 100
 	void __iomem *baddr = comp->regs;
 	u32 width = 0;
 	u32 height = 0;
@@ -141,9 +142,8 @@ int mtk_merge_analysis(struct mtk_ddp_comp *comp)
 	u32 dbg0 = 0;
 	u32 dbg1 = 0;
 
-	const int len = 100;
 	int ret;
-	char msg[len];
+	char msg[LEN];
 
 	enable = readl(baddr + DISP_REG_MERGE_CTRL);
 	width = readl(baddr + DISP_REG_MERGE_WIDTH);
@@ -153,7 +153,7 @@ int mtk_merge_analysis(struct mtk_ddp_comp *comp)
 
 	DDPDUMP("== DISP %s ANALYSIS ==\n", mtk_dump_comp_str(comp));
 
-	ret = snprintf(msg, len,
+	ret = snprintf(msg, LEN,
 		"en:%d,swap:%d,dcm_dis:%d,width_L:%d,width_R:%d,h:%d,pix_cnt:%d,line_cnt:%d\n",
 		REG_FLD_VAL_GET(FLD_MERGE_EN, enable),
 		REG_FLD_VAL_GET(FLD_MERGE_LR_SWAP, enable),

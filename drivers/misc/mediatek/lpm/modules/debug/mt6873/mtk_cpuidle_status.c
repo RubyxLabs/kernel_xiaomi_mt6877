@@ -362,7 +362,6 @@ void mtk_s2idle_state_enable(bool en)
 	mtk_cpupm_allow();
 }
 
-
 unsigned long long mtk_cpuidle_state_last_dis_ms(void)
 {
 	return (mtk_lpm_last_cpuidle_dis / 1000000);
@@ -663,5 +662,4 @@ void __exit mtk_cpuidle_status_exit(void)
 {
 	mtk_lpm_notifier_unregister(&mtk_cpuidle_status_nb);
 }
-
 

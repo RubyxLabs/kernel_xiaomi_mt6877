@@ -1,5 +1,4 @@
 export MTK_PLATFORM := $(subst $(quote),,$(CONFIG_MTK_PLATFORM))
-subdir-ccflags-y := -Werror $(call cc-disable-warning, unused-but-set-variable)
 subdir-ccflags-y += -I$(srctree)/drivers/misc/mediatek/include
 subdir-ccflags-y += -I$(srctree)/drivers/misc/mediatek/include/mt-plat/$(MTK_PLATFORM)/include
 subdir-ccflags-y += -I$(srctree)/drivers/misc/mediatek/include/mt-plat/
@@ -37,7 +36,6 @@ obj-$(CONFIG_MTK_PMIC_WRAP_HAL) += pmic_wrap/
 obj-y += devinfo/
 obj-y += subpmic/
 obj-$(CONFIG_MTK_TINYSYS_MCUPM_SUPPORT) += mcupm/
-obj-$(CONFIG_MTK_MET) += met_drv/
 obj-$(CONFIG_MTK_BASE_POWER) += base/
 obj-$(CONFIG_MTK_SERIAL)	+= uart/
 obj-$(CONFIG_MTK_PWM)	    += pwm/
@@ -64,7 +62,6 @@ obj-$(CONFIG_MTK_ECCCI_DRIVER) +=  eccci/
 obj-$(CONFIG_MTK_EMI_LEGACY) += emi/
 obj-$(CONFIG_MTK_EMI_BWL)	+= emi_bwl/
 obj-$(CONFIG_MTK_EMI_MPU) += emi_mpu/
-obj-$(CONFIG_MMPROFILE) += mmp/
 obj-$(CONFIG_MTK_TRUSTED_MEMORY_SUBSYSTEM) += trusted_mem/
 obj-$(CONFIG_MTK_ENABLE_GENIEZONE) += geniezone/
 obj-$(CONFIG_MTK_TEE_SANITY) += tee_sanity/
@@ -84,18 +81,17 @@ obj-$(CONFIG_MTK_SYNC) += sync/
 obj-${CONFIG_MTK_ATF_LOGGER} += atf/
 obj-$(CONFIG_MTK_APUSYS_SUPPORT) += apusys/
 obj-$(CONFIG_MTK_AMMS) += memory-amms/
-obj-$(CONFIG_MTPROF) += mtprof/
-obj-${CONFIG_MTK_ICE_DEBUG} += ice_debug/
 obj-$(CONFIG_MTK_TINYSYS_SSPM_SUPPORT) += sspm/
 obj-$(CONFIG_MTK_SPMTWAM) += twam/
 obj-$(CONFIG_MTK_DVFSRC) += dvfsrc/
-obj-$(CONFIG_MTK_AEE_FEATURE) += aee/
 obj-$(CONFIG_MTK_CLK_BUFFER) += clkbuf/
 obj-$(CONFIG_MTK_QOS_FRAMEWORK) += qos/
 obj-$(CONFIG_MTK_SLBC) += slbc/
 ifneq ($(CONFIG_MACH_MT6893), y)
+ifneq ($(CONFIG_MACH_MT6885), y)
 ifneq ($(CONFIG_MACH_MT6771), y)
 obj-$(CONFIG_MTK_CM_MGR) += cm_mgr/
+endif
 endif
 endif
 ifneq ($(CONFIG_MTK_BASE_POWER), y)
@@ -123,9 +119,6 @@ obj-$(CONFIG_MTK_PERFORMANCE_MODULE) += performance/
 obj-y += mmdvfs/
 obj-$(CONFIG_MTK_IOMMU_MISC) += iommu/
 obj-$(CONFIG_INTERCONNECT_MTK_MMQOS_COMMON) += mmqos/
-obj-$(CONFIG_MTK_PERF_COMMON) += perf_common/
-obj-$(CONFIG_MTK_SYSTRACKER_V2) += systracker/
-obj-$(CONFIG_MTK_HANG_DETECT) += monitor_hang/
 ifeq ($(CONFIG_MTK_GAUGE_VERSION),30)
 obj-y += power/
 else
@@ -135,7 +128,6 @@ endif
 obj-$(CONFIG_MTK_LEGACY_THERMAL) += thermal/
 #obj-$(CONFIG_THERMAL) += thermalv1/
 obj-$(CONFIG_MTK_PLAT_SRAM_FLAG) += debug_latch/
-obj-$(CONFIG_MTK_DEBUG_TRACER)	+= debug_tracer/
 obj-$(CONFIG_MEDIATEK_CACHE_API) += cache/
 
 ifneq ($(CONFIG_MTK_BASE_POWER), y)
@@ -143,7 +135,6 @@ obj-$(CONFIG_MTK_STATIC_POWER) += leakage_table_v2/
 obj-$(CONFIG_MTK_UNIFY_POWER) += upower_v2/
 endif
 
-obj-$(CONFIG_PRINTK_MTK) += mtprintk/
 obj-$(CONFIG_MTK_LEDS) += leds/
 obj-$(CONFIG_MT6360_DBG) += subpmic/
 obj-$(CONFIG_MTK_CAMERA_ISP) += cameraisp/
@@ -162,7 +153,6 @@ obj-$(CONFIG_RT_REGMAP) += rt-regmap/
 obj-$(CONFIG_MTK_VIDEOCODEC_DRIVER) += videocodec/
 obj-$(CONFIG_MTK_FLASHLIGHT) += flashlight/
 obj-$(CONFIG_RT_FLASHLIGHT)     += flashlight/richtek/
-obj-$(CONFIG_USB) += usb_boost/
 obj-$(CONFIG_USB_MTK_HDRC) += usb20/
 ifeq ($(CONFIG_MACH_MT6781),y)
 obj-$(CONFIG_MTK_MUSB_PHY) += usb20/mt6781
@@ -178,14 +168,9 @@ obj-$(CONFIG_MTK_USB_TYPEC) += typec/
 obj-$(CONFIG_MTK_MDLA_SUPPORT) += mdla/
 obj-$(CONFIG_MTK_VPU_SUPPORT) += vpu/
 obj-$(CONFIG_MTK_CCU)	+= ccu/src/
-obj-$(CONFIG_MTK_BLOCK_TAG) += blocktag/
 obj-$(CONFIG_MTK_VIBRATOR) += vibrator/
-obj-$(CONFIG_MTK_PID_MAP) += pidmap/
 obj-$(CONFIG_MTK_JPEG) += jpeg/
 obj-$(CONFIG_MTK_VOW_SUPPORT)  += vow/
-ifneq ($(wildcard $(srctree)/../vendor/mediatek/internal/selinux_warning_enable),)
-obj-$(CONFIG_MTK_SELINUX_AEE_WARNING)	+= selinux_warning/
-endif
 ifeq ($(CONFIG_MACH_MT6833),y)
 obj-$(CONFIG_THERMAL)   += thermal/
 endif
@@ -206,3 +191,4 @@ obj-$(CONFIG_MTK_GATE_IC) += gate_ic/
 obj-$(CONFIG_MTK_FREQ_HOPPING) += freqhopping/
 obj-$(CONFIG_MTK_TASK_TURBO) += task_turbo/
 obj-$(CONFIG_MTK_ULTRASND_PROXIMITY) += elliptic/
+obj-$(CONFIG_ARCH_MEDIATEK) += mboot_params/

@@ -18,6 +18,12 @@ config DRM_MEDIATEK
 	  This driver provides kernel mode setting and
 	  buffer management to userspace.
 
+config DRM_MEDIATEK_LEGACY
+	bool "Support older display blobs"
+	depends on DRM_MEDIATEK
+	help
+	  Say Y here if you have older display blobs.
+
 config DRM_MEDIATEK_HDMI
 	tristate "DRM HDMI Support for Mediatek SoCs"
 	depends on DRM_MEDIATEK
@@ -75,3 +81,21 @@ config MTK_MT6382_BDG
 	  Normal project will disable it first
 	  If you are not sure about this, do not set it to y
 source "drivers/gpu/drm/mediatek/mi_disp/Kconfig"
+
+config MTK_SLD_SUPPORT
+	bool "Support subdued light display feature"
+	default n
+	help
+	  subdued light display feature support decrease picture brightness
+	  without changing backlight brightness.
+	  If you want to enable this feature, set Y.
+	  If unsure, set N.
+
+config MTK_HDMI_SUPPORT
+	bool "MTK_HDMI_SUPPORT"
+	default n
+	help
+	  DRM/KMS DPTX driver for Mediatek SoCs
+	  Choose this option if you want to enable
+	  DPTX driver, and this config depends on
+	  DRM_MEDIATEK.

@@ -412,6 +412,8 @@ static void mtk_battery_external_power_changed(struct power_supply *psy)
 			if (status.intval == POWER_SUPPLY_STATUS_NOT_CHARGING)
 				bs_data->bat_status =
 					POWER_SUPPLY_STATUS_NOT_CHARGING;
+			else if (status.intval == POWER_SUPPLY_STATUS_FULL)
+				bs_data->bat_status = POWER_SUPPLY_STATUS_FULL;
 			else
 				bs_data->bat_status =
 					POWER_SUPPLY_STATUS_CHARGING;

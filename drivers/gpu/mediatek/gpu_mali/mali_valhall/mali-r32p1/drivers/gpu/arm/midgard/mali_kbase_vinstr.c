@@ -40,9 +40,6 @@
 #include <linux/workqueue.h>
 
 #include <platform/mtk_mfg_counter.h>
-#ifdef CONFIG_MTK_PERF_TRACKER
-#include <perf_tracker_internal.h>
-#endif
 #if IS_ENABLED(CONFIG_MTK_SWPM)
 #include <mtk_swpm_interface.h>
 #include <mtk_gpu_swpm_plat.h>
@@ -1444,9 +1441,6 @@ void MTK_update_gpu_LTR(void)
 	gpu_perf_counter.counter[VINSTR_STALL1] = stall_counter[1];
 	gpu_perf_counter.counter[VINSTR_STALL2] = stall_counter[2];
 	gpu_perf_counter.counter[VINSTR_STALL3] = stall_counter[3];
-#if IS_ENABLED(CONFIG_MTK_PERF_TRACKER) && IS_ENABLED(CONFIG_MTK_GPU_SWPM_SUPPORT)
-	perf_update_gpu_counter(gpu_perf_counter.counter, VINSTR_PERF_COUNTER_LAST);
-#endif
 
 
 }

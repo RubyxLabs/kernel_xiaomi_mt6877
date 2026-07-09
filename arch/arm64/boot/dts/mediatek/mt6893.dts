@@ -13,6 +13,7 @@
 #include <dt-bindings/mfd/mt6359-irq.h>
 #include <dt-bindings/pinctrl/mt6885-pinfunc.h>
 #include <dt-bindings/clock/mt6893-clk.h>
+#include <dt-bindings/reset/ti-syscon.h>
 #include <dt-bindings/soc/mediatek,boot-mode.h>
 #include <dt-bindings/spmi/spmi.h>
 #include <dt-bindings/phy/phy.h>
@@ -802,9 +803,9 @@ page_owner=on loop.max_part=7";
 	};
 
 	cache_parity {
-		compatible = "mediatek,cache_parity";
-		version = <2>;
-		err_level = <0>;
+		compatible = "mediatek,cache_parity", "mediatek,mt6873-cache-parity";
+		ecc-irq-support = <1>;
+		arm_dsu_ecc_hwirq = <32>;
 		interrupts = <GIC_SPI 1 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 2 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 3 IRQ_TYPE_LEVEL_HIGH>,
@@ -871,6 +872,23 @@ page_owner=on loop.max_part=7";
 		compatible = "mediatek,mt6893-infracfg_ao", "syscon", "simple-mfd", "mediatek,infracfg_ao";
 		reg = <0 0x10001000 0 0x1000>;
 		#clock-cells = <1>;
+
+		infracfg_rst: reset-controller {
+			compatible = "ti,syscon-reset";
+			#reset-cells = <1>;
+
+			ti,reset-bits = <
+				/* 0: ufs: hci_rst */
+				0x130 15 0x134 15 0 0
+				(ASSERT_SET | DEASSERT_SET | STATUS_NONE)
+				/* 1: ufs: unipro_rst */
+				0x140  7 0x144  7 0 0
+				(ASSERT_SET | DEASSERT_SET | STATUS_NONE)
+				/* 2: ufs: crypto_rst */
+				0x150 21 0x154 21 0 0
+				(ASSERT_SET | DEASSERT_SET | STATUS_NONE)
+			>;
+		};
 	};
 
 	dcm: dcm@10001000 {
@@ -2512,6 +2530,7 @@ page_owner=on loop.max_part=7";
 		charger = <&mt6360_chg>;
 		dev-conn = <&ssusb>;
 		mediatek,bypss-typec-sink = <1>;
+		not_support_u3;
 	};
 
 	mmc0: mmc@11230000 {
@@ -2563,7 +2582,11 @@ page_owner=on loop.max_part=7";
 			<0 0>;
 
 		vcc-supply = <&mt_pmic_vemc_ldo_reg>;
-		vccq2-supply = <&mt_pmic_vufs_ldo_reg>;
+		vcc-fixed-regulator;
+
+		resets = <&infracfg_rst 0>, <&infracfg_rst 1>,
+			 <&infracfg_rst 2>;
+		reset-names = "hci_rst", "unipro_rst", "crypto_rst";
 
 		/* Reference clock control mode */
 		/* SW mode: 0, Half-HW mode: 1, HW mode: 2 */
@@ -3277,6 +3300,9 @@ page_owner=on loop.max_part=7";
 		mediatek,chain_length = <0x4c08>;
 		mediatek,rg_dfd_timeout = <0xa0>;
 		mediatek,check_dfd_support = <1>;
+		mediatek,dfd_infra_base = <0x34>;
+		mediatek,dfd_ap_addr_offset = <24>;
+		mediatek,dfd_latch_offset = <0x44>;
 	};
 
 	dfd_cache: dfd_cache {
@@ -3815,6 +3841,11 @@ page_owner=on loop.max_part=7";
 	irq_nfc: irq_nfc {
 		compatible = "mediatek,irq_nfc-eint";
 	};
+
+	mtee_svp: mtee_svp {
+		compatible = "medaitek,svp";
+	};
+	/* svp end */
 
 	mdp_mutex: mdp_mutex@1f001000 {
 		compatible = "mediatek,mdp_mutex";
@@ -8821,11 +8852,6 @@ page_owner=on loop.max_part=7";
 #include "mediatek/mt6359p.dtsi"
 #include "mediatek/cust_mt6893_msdc.dtsi"
 #include "mediatek/v1/mt6360_pd.dtsi"
-
-&mt_pmic_vemc_ldo_reg {
-	regulator-min-microvolt = <3000000>;
-	regulator-max-microvolt = <3000000>;
-};
 
 #ifdef CONFIG_MTK_ENABLE_GENIEZONE
 #include "mediatek/trusty.dtsi"

@@ -157,7 +157,9 @@ struct cmdq_sec {
 	struct cmdq_sec_shared_mem	*shared_mem;
 	struct cmdq_sec_context		*context;
 	struct iwcCmdqCancelTask_t	cancel;
+#if IS_ENABLED(CONFIG_MMPROFILE)
 	struct cmdq_mmp_event		mmp;
+#endif
 };
 static atomic_t cmdq_path_res = ATOMIC_INIT(0);
 static atomic_t cmdq_path_res_mtee = ATOMIC_INIT(0);
@@ -1759,7 +1761,7 @@ static int __init cmdq_sec_init(void)
 	return err;
 }
 
-#ifdef CMDQ_GP_SUPPORT
+#if defined(CMDQ_GP_SUPPORT) || defined(CMDQ_SECURE_MTEE_SUPPORT)
 static s32 cmdq_sec_late_init_wsm(void *data)
 {
 	struct cmdq_sec *cmdq;

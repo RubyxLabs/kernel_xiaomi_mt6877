@@ -233,14 +233,6 @@ int Ripi_cpu_dvfs_thread(void *data)
 				if (j > p->idx_opp_ppm_base)
 					j = p->idx_opp_ppm_base;
 
-				/* Update policy min/max */
-				p->mt_policy->min =
-					cpu_dvfs_get_freq_by_idx(p,
-						p->idx_opp_ppm_base);
-				p->mt_policy->max =
-					cpu_dvfs_get_freq_by_idx(p,
-						p->idx_opp_ppm_limit);
-
 				cid = arch_get_cluster_id(p->mt_policy->cpu);
 				if (cid == 0)
 					met_tag_oneshot(0, "sched_dvfs_max_c0",

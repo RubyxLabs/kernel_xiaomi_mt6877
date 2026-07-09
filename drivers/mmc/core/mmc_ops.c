@@ -26,6 +26,7 @@
 #define MMC_OPS_TIMEOUT_MS		(10 * 60 * 1000) /* 10min*/
 #define MMC_BKOPS_TIMEOUT_MS		(120 * 1000) /* 120s */
 #define MMC_CACHE_FLUSH_TIMEOUT_MS	(30 * 1000) /* 30s */
+#define DAT_TIMEOUT			(1000    * 5) /* 1000ms x5 */
 
 static const u8 tuning_blk_pattern_4bit[] = {
 	0xff, 0x0f, 0xff, 0x00, 0xff, 0xcc, 0xc3, 0xcc,
@@ -535,7 +536,8 @@ int __mmc_switch(struct mmc_card *card, u8 set, u8 index, u8 value,
 		pr_warn("%s: unspecified timeout for CMD6 - use generic\n",
 			mmc_hostname(host));
 		timeout_ms = card->ext_csd.generic_cmd6_time;
-	}
+	} else if (timeout_ms < DAT_TIMEOUT)
+		timeout_ms = DAT_TIMEOUT;
 
 	/*
 	 * If the cmd timeout and the max_busy_timeout of the host are both
@@ -580,7 +582,7 @@ int __mmc_switch(struct mmc_card *card, u8 set, u8 index, u8 value,
 
 	/* Let's try to poll to find out when the command is completed. */
 	err = mmc_poll_for_busy(card, timeout_ms, send_status, retry_crc_err);
-	if (err)
+	if (err && err != -ETIMEDOUT)
 		goto out;
 
 out_tim:

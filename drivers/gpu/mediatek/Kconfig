@@ -33,6 +33,15 @@ config SW_SYNC64
 	  syncrhronization.  Useful when there is no hardware
 	  primitive backing the synchronization.
 
+config MTK_GPU_PVR_LEGACY
+	bool "Support older PowerVR firmware"
+	help
+	  If using a PowerVR GPU, you may run into issues
+	  with older GPU firmware.
+
+	  Say Y here to enable compatibility for older PowerVR
+	  firmware.
+
 config MTK_GED_SUPPORT
 	bool "Support MTK GED"
 	default n
