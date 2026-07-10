@@ -1360,6 +1360,11 @@ static void uclamp_fork(struct task_struct *p)
 	}
 }
 
+static void uclamp_post_fork(struct task_struct *p)
+{
+	uclamp_update_util_min_rt_default(p);
+}
+
 #ifdef CONFIG_SMP
 unsigned int uclamp_task(struct task_struct *p)
 {

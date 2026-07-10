@@ -924,7 +924,6 @@ struct rndis_params *rndis_register(void (*resp_avail)(void *v), void *v)
 	params->media_state = RNDIS_MEDIA_STATE_DISCONNECTED;
 	params->resp_avail = resp_avail;
 	params->v = v;
-	params->max_pkt_per_xfer = 1;
 	INIT_LIST_HEAD(&params->resp_queue);
 	spin_lock_init(&params->resp_lock);
 	pr_debug("%s: configNr = %d\n", __func__, i);
