@@ -74,6 +74,7 @@ struct cpufreq_cooling_device {
 	unsigned int cpufreq_state;
 	unsigned int max_level;
 	struct em_perf_domain *em;
+	struct thermal_cooling_device *cdev;
 	struct cpufreq_policy *policy;
 	struct list_head node;
 	struct time_in_idle *idle_time;
@@ -603,6 +604,7 @@ __cpufreq_cooling_register(struct device_node *np,
 						  cooling_ops);
 	if (IS_ERR(cdev))
 		goto remove_qos_req;
+	cpufreq_cdev->cdev = cdev;
 
 	mutex_lock(&cooling_list_lock);
 	list_add(&cpufreq_cdev->node, &cpufreq_cdev_list);
