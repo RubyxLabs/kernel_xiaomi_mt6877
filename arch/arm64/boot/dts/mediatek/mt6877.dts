@@ -1594,11 +1594,6 @@
 		compatible = "mediatek,irq_nfc-eint";
 	};
 
-	mtee_svp: mtee_svp {
-		compatible = "medaitek,svp";
-	};
-	/* svp end */
-
 	gpio_usage_mapping:gpio_usage_mapping {
 		compatible = "mediatek,gpio_usage_mapping";
 	};
@@ -6817,4 +6812,3 @@
 #include "mediatek/trusty.dtsi"
 #endif
 #include "mediatek/cust_mt6877_connfem.dtsi"
-
